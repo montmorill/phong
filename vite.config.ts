@@ -21,7 +21,7 @@ export default defineConfig({
     },
   },
   preview: {
-    port: 443,
+    port: 80,
     allowedHosts: ['pbhh.net', 'www.pbhh.net'],
     proxy: {
       '/api': {
