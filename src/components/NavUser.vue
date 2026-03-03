@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import useAvatar from '@/composables/avatar'
-import { clearAuth } from '@/lib/store'
+import { clearAuth } from '@/lib/api'
 
 const props = defineProps<UserProfile>()
 

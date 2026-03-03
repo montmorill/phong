@@ -1,41 +1,37 @@
-nav:
-  profile: 个人资料
-  logout: 退出登录
-
+brand:
+  name: 平渹网
 home:
-  welcome: '{nickname}，欢迎回到平渹网。'
+  welcome: "{nickname}，欢迎回到平渹网。"
   notLoggedIn: 您还没有登录，请{login}或{signup}
   loginLink: 登录
   signupLink: 注册
   joinGroup: 点击链接加入群聊{group}
   joinGroupName: 【平渹网工作小组】
-
+nav:
+  profile: 个人资料
+  logout: 退出登录
 login:
   title: 登录
   submit: '@:login.title'
   submitting: 登录中…
   noAccount: 还没有账户？
   signupLink: 立即注册
-
 signup:
   title: 注册
   submit: '@:signup.title'
   submitting: 注册中…
   hasAccount: 已有账户？
   loginLink: 立即登录
-
 profile:
   title: 个人资料
   save: 保存
   saving: 保存中…
   saved: 已保存
-
 validation:
   required: '{label}不能为空'
   minLength: '{label}至少 {min} 个字符'
   maxLength: '{label}最多 {max} 个字符'
   pattern: '{label}格式不正确'
-
 field:
   username:
     label: 用户名
@@ -46,9 +42,14 @@ field:
     placeholder: 请输入昵称
   avatar:
     label: 头像
-    placeholder:
-      qq: 请输入 QQ 号
-      gravatar: 请输入邮箱地址
+    qq:
+      label: QQ
+      placeholder: 请输入 QQ 号
+      pattern: QQ 号格式不正确（5-12 位数字）
+    gravatar:
+      label: Gravatar
+      placeholder: 请输入邮箱地址
+      pattern: 邮箱格式不正确
   password:
     label: 密码
     placeholder: 请输入密码
@@ -56,7 +57,6 @@ field:
     label: 确认密码
     placeholder: 再次输入密码
     mismatch: 两次输入的密码不一致
-
 error:
   invalidCredentials: 用户名或密码错误
   badRequest: 参数错误

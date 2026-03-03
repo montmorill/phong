@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import { i18n } from './i18n'
-import { fetchUser, user } from './lib/store'
+import { fetchUser, user } from './lib/api'
 import './style.css'
 
 const router = createRouter({
@@ -22,10 +22,9 @@ router.beforeEach((to) => {
     return '/login'
 })
 
-;(async () => {
-  if (localStorage.getItem('token')) {
-    await fetchUser()
-  }
+if (localStorage.getItem('token')) {
+  // eslint-disable-next-line antfu/no-top-level-await
+  await fetchUser()
+}
 
-  createApp(App).use(router).use(i18n).mount('#app')
-})()
+createApp(App).use(router).use(i18n).mount('#app')

@@ -1,105 +1,61 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import FormField from '@/components/FormField.vue'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import FormPage from '@/components/FormPage.vue'
 import { useFormFields } from '@/composables/useFormFields'
-import { api } from '@/lib/api'
-import { fetchUser, setToken } from '@/lib/store'
-import { validatePassword, validateUsername } from '@/lib/validators'
+import { useValidators } from '@/composables/useValidators'
+import { api, fetchUser, setToken } from '@/lib/api'
 
-const composer = useI18n()
-const { t, te } = composer
 const router = useRouter()
-
+const { t, te } = useI18n()
+const { username, password } = useValidators()
 const { fields, filled, hasErrors } = useFormFields({
-  username: { type: 'text', autocomplete: 'username', validate: value => validateUsername(composer, value) },
-  password: { type: 'password', autocomplete: 'current-password', validate: value => validatePassword(composer, value) },
+  username: { type: 'text', autocomplete: 'username', validate: username },
+  password: { type: 'password', autocomplete: 'current-password', validate: password },
 })
 
-const loading = ref(false)
-const serverError = ref('')
+async function handleSubmit(): Promise<string | void> {
+  const { data, error } = await api.login.post({
+    username: fields.username.value.value,
+    password: fields.password.value.value,
+  })
 
-async function handleSubmit() {
-  if (!filled.value || hasErrors.value)
-    return
-
-  loading.value = true
-  serverError.value = ''
-
-  try {
-    const { data, error } = await api.login.post({
-      username: fields.username.value.value,
-      password: fields.password.value.value,
-    })
-
-    if (error) {
-      const key = error.value?.message
-      serverError.value = key && te(key) ? t(key) : t('error.loginFailed')
-      return
-    }
-
-    setToken(data.token)
-    await fetchUser()
-    router.push('/')
+  if (error) {
+    const key = error.value?.message
+    return key && te(key) ? t(key) : t('error.loginFailed')
   }
-  catch {
-    serverError.value = t('error.networkError')
-  }
-  finally {
-    loading.value = false
-  }
+
+  setToken(data.token)
+  await fetchUser()
+  router.push('/')
 }
 </script>
 
 <template>
-  <main class="flex justify-center pt-24">
-    <div class="w-full max-w-sm px-4">
-      <h1 class="text-3xl font-bold text-center mb-6">
-        {{ t('login.title') }}
-      </h1>
+  <FormPage
+    :title="t('login.title')"
+    :submit-text="t('login.submit')"
+    :submitting-text="t('login.submitting')"
+    :disabled="!filled || hasErrors"
+    :submit="handleSubmit"
+  >
+    <FormField
+      v-for="field, key in fields"
+      :id="key" :key="key" v-bind="field"
+      v-model:value="field.value.value"
+      v-model:error="field.error.value"
+      :label="t(`field.${key}.label`)"
+      :placeholder="t(`field.${key}.placeholder`)"
+    />
 
-      <Card>
-        <form @submit.prevent="handleSubmit">
-          <CardContent class="space-y-4 pt-6">
-            <Alert v-if="serverError" variant="destructive">
-              <AlertDescription>{{ serverError }}</AlertDescription>
-            </Alert>
-
-            <FormField
-              v-for="field, key in fields"
-              :id="key"
-              :key="key"
-              v-model="field.value.value"
-              v-bind="field"
-              :label="t(`field.${key}.label`)"
-              :placeholder="t(`field.${key}.placeholder`)"
-              :error="field.error.value"
-              @input="field.error.value = field.validate(field.value.value)"
-            />
-          </CardContent>
-
-          <CardFooter class="flex-col gap-2">
-            <Button
-              type="submit"
-              class="w-full"
-              :disabled="!filled || hasErrors || loading"
-            >
-              <Spinner v-if="loading" data-icon="inline-start" />
-              {{ loading ? t('login.submitting') : t('login.submit') }}
-            </Button>
-            <p class="text-center text-sm text-muted-foreground">
-              {{ t('login.noAccount') }}
-              <RouterLink to="/signup" class="text-foreground underline underline-offset-4 hover:text-primary">
-                {{ t('login.signupLink') }}
-              </RouterLink>
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
-  </main>
+    <template #footer>
+      <p class="text-center text-sm text-muted-foreground">
+        {{ t('login.noAccount') }}
+        <RouterLink to="/signup" class="text-foreground underline underline-offset-4 hover:text-primary">
+          {{ t('login.signupLink') }}
+        </RouterLink>
+      </p>
+    </template>
+  </FormPage>
 </template>

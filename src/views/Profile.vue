@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ChevronDown } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import FormField from '@/components/FormField.vue'
+import FormPage from '@/components/FormPage.vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,108 +16,97 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PROVIDERS, useAvatar } from '@/composables/avatar'
-import { api } from '@/lib/api'
-import { fetchUser, user } from '@/lib/store'
-import { validateNickname } from '@/lib/validators'
+import { useFormFields } from '@/composables/useFormFields'
+import { useValidators } from '@/composables/useValidators'
+import { api, fetchUser, user } from '@/lib/api'
 
-const composer = useI18n()
-const { t } = composer
+const { t } = useI18n()
 
-const { avatarProvider, avatarInput, avatarUrl, avatarString } = useAvatar(user.value?.avatar)
+const { avatarProvider, avatarValue, avatarUrl, avatarString } = useAvatar(user.value?.avatar)
 
-const currentProviderLabel = computed(() => PROVIDERS[avatarProvider.value].label)
+const { nickname } = useValidators()
+const { fields, filled, hasErrors, isDirty: fieldsDirty } = useFormFields({
+  username: { type: 'text', autocomplete: 'username', disabled: true, value: user.value?.username },
+  nickname: { type: 'text', autocomplete: 'nickname', validate: nickname, value: user.value?.nickname },
+})
 
-const form = ref({ nickname: user.value?.nickname ?? '' })
-const nicknameError = ref('')
+const initialAvatarString = avatarString.value
+const avatarDirty = computed(() => avatarString.value !== initialAvatarString)
+const isDirty = computed(() => fieldsDirty.value || avatarDirty.value)
+const avatarError = computed(() =>
+  avatarValue.value && !PROVIDERS[avatarProvider.value].validate(avatarValue.value)
+    ? t(`field.avatar.${avatarProvider.value}.pattern`)
+    : '',
+)
 
-function onValidateNickname() {
-  nicknameError.value = validateNickname(composer, form.value.nickname)
-}
-
-async function sync() {
-  const nickname = nicknameError.value ? user.value!.nickname : form.value.nickname
-  await api.me.patch({ nickname, avatar: avatarString.value })
+async function handleSubmit(): Promise<string | void> {
+  await api.me.patch({
+    nickname: fields.nickname.value.value,
+    avatar: avatarString.value,
+  })
   await fetchUser()
 }
 </script>
 
 <template>
-  <main class="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-    <div class="w-full max-w-sm px-4">
-      <h1 class="text-3xl font-bold text-center mb-6">
-        {{ t('profile.title') }}
-      </h1>
-
-      <Card>
-        <CardContent class="space-y-4 pt-6 pb-6">
-          <div class="flex justify-center mb-2">
-            <Avatar class="size-20 border">
-              <AvatarImage :src="avatarUrl" :alt="user?.username" />
-              <AvatarFallback>{{ user?.nickname?.slice(0, 2) }}</AvatarFallback>
-            </Avatar>
-          </div>
-
-          <div class="space-y-2">
-            <Label for="username">{{ t('field.username.label') }}</Label>
-            <Input
-              id="username"
-              :model-value="user?.username"
-              disabled
-              spellcheck="false"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <Label for="nickname">{{ t('field.nickname.label') }}</Label>
-            <Input
-              id="nickname"
-              v-model="form.nickname"
-              type="text"
-              :placeholder="t('field.nickname.placeholder')"
-              spellcheck="false"
-              :class="nicknameError ? 'border-destructive' : ''"
-              @input="onValidateNickname"
-              @blur="sync"
-            />
-            <p v-if="nicknameError" class="text-xs text-destructive">
-              {{ nicknameError }}
-            </p>
-          </div>
-
-          <div class="space-y-2">
-            <Label>{{ t('field.avatar.label') }}</Label>
-            <div class="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="outline" class="shrink-0 gap-1">
-                    {{ currentProviderLabel }}
-                    <ChevronDown class="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuRadioGroup v-model="avatarProvider">
-                    <DropdownMenuRadioItem
-                      v-for="provider, key in PROVIDERS"
-                      :key="key"
-                      :value="key"
-                      @select="avatarInput = ''"
-                    >
-                      {{ provider.label }}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Input
-                v-model="avatarInput"
-                :inputmode="PROVIDERS[avatarProvider].inputmode"
-                :placeholder="t(`field.avatar.placeholder.${avatarProvider}`)"
-                spellcheck="false"
-                @blur="sync"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+  <FormPage
+    :title="$t('profile.title')"
+    :submit-text="$t('profile.save')"
+    :submitting-text="$t('profile.saving')"
+    :disabled="!filled || hasErrors || !!avatarError || !isDirty"
+    :submit="handleSubmit"
+  >
+    <div class="flex justify-center mb-2">
+      <Avatar class="size-20 border">
+        <AvatarImage :src="avatarUrl" :alt="user?.username" />
+        <AvatarFallback>{{ user?.nickname?.slice(0, 2) }}</AvatarFallback>
+      </Avatar>
     </div>
-  </main>
+
+    <FormField
+      v-for="field, key in fields"
+      :id="key" :key="key" v-bind="field"
+      v-model:value="field.value.value"
+      v-model:error="field.error.value"
+      :label="$t(`field.${key}.label`)"
+      :placeholder="$t(`field.${key}.placeholder`)"
+      :dirty="!field.disabled && field.value.value !== field.initial"
+    />
+
+    <div class="space-y-2">
+      <div class="flex justify-between items-end">
+        <Label>{{ $t('field.avatar.label') }}<span v-if="avatarDirty" class="text-destructive"> *</span></Label>
+        <div v-if="avatarError" class="text-xs leading-none text-destructive">{{ avatarError }}</div>
+      </div>
+      <div class="flex gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="outline" class="shrink-0 gap-1">
+              {{ $t(`field.avatar.${avatarProvider}.label`) }}
+              <ChevronDown class="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuRadioGroup v-model="avatarProvider">
+              <DropdownMenuRadioItem
+                v-for="provider in Object.keys(PROVIDERS)"
+                :key="provider"
+                :value="provider"
+                @select="avatarValue = ''"
+              >
+                {{ $t(`field.avatar.${provider}.label`) }}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Input
+          v-model="avatarValue"
+          :inputmode="PROVIDERS[avatarProvider].inputmode"
+          :placeholder="$t(`field.avatar.${avatarProvider}.placeholder`)"
+          :class="avatarError && 'border-destructive'"
+          spellcheck="false"
+        />
+      </div>
+    </div>
+  </FormPage>
 </template>

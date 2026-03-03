@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Translation, useI18n } from 'vue-i18n'
 import useHitokoto from '@/composables/hitokoto'
-import { user } from '@/lib/store'
+import { user } from '@/lib/api'
 
 const { t } = useI18n()
 
@@ -9,7 +9,7 @@ const { hitokoto, fromLine } = useHitokoto()
 </script>
 
 <template>
-  <main class="flex flex-col gap-4 items-center pt-12">
+  <main class="flex flex-col items-center justify-center gap-4">
     <p v-if="user">
       {{ t('home.welcome', user) }}
     </p>
@@ -33,8 +33,8 @@ const { hitokoto, fromLine } = useHitokoto()
       </template>
     </Translation>
     <p v-if="hitokoto" class="text-muted-foreground italic text-sm flex flex-col">
-      <span class="pr-8">{{ hitokoto.hitokoto }}</span>
-      <span class="pl-8 self-end">{{ fromLine }}</span>
+      <span class="pr-[2em]">{{ hitokoto.hitokoto }}</span>
+      <span class="pl-[2em] self-end">{{ fromLine }}</span>
     </p>
   </main>
 </template>

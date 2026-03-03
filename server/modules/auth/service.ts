@@ -11,14 +11,13 @@ export async function verify(username: string, password: string) {
   return isValid ? user : null
 }
 
-export async function create({ username, nickname, password, avatar }: SignupBody) {
+export async function create({ username, nickname, password }: SignupBody) {
   const existing = db.select().from(users).where(eq(users.username, username)).get()
   if (existing)
     return null
   db.insert(users).values({
     username,
     nickname,
-    avatar: avatar ?? '',
     password: await bcrypt.hash(password, 8),
   }).run()
   return { username }

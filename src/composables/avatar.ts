@@ -1,10 +1,15 @@
-import type { HTMLAttributes, InputAutoCompleteAttribute, InputTypeHTMLAttribute, MaybeRefOrGetter } from 'vue'
+import type {
+  HTMLAttributes,
+  InputAutoCompleteAttribute,
+  InputTypeHTMLAttribute,
+  MaybeRefOrGetter,
+} from 'vue'
 import type { Awaitable } from '@/types'
 import { computed, ref, toValue, watchEffect } from 'vue'
 import defaultAvatar from '@/assets/default-avatar.svg'
 
-export interface Provider {
-  label: string
+export interface AvatarProvider {
+  validate: (value: string) => boolean
   resolve: (value: string) => Awaitable<string>
   type?: InputTypeHTMLAttribute
   autocomplete?: InputAutoCompleteAttribute
@@ -13,14 +18,14 @@ export interface Provider {
 
 export const PROVIDERS = {
   qq: {
-    label: 'QQ',
+    validate: (value: string) => /^\d{5,12}$/.test(value),
     resolve(value: string) {
       return /^\d{5,12}$/.test(value) ? `https://q.qlogo.cn/g?b=qq&s=640&nk=${value}` : ''
     },
     inputmode: 'numeric',
   },
   gravatar: {
-    label: 'Gravatar',
+    validate: (value: string) => value.includes('@') && value.includes('.'),
     resolve: async (value: string) => {
       if (!value.includes('@') || !value.includes('.'))
         return ''
@@ -32,46 +37,50 @@ export const PROVIDERS = {
     inputmode: 'email',
     autocomplete: 'email',
   },
-} satisfies Record<string, Provider>
+} satisfies Record<string, AvatarProvider>
 
-export type ProviderId = keyof typeof PROVIDERS
+export type AvatarProviderId = keyof typeof PROVIDERS
 
 export interface Avatar {
-  provider: ProviderId
-  input: string
+  provider: AvatarProviderId
+  value: string
 }
 
 export function parseAvatar(avatar: string | undefined): Avatar {
   if (!avatar)
-    return { provider: 'qq', input: '' }
+    return { provider: 'qq', value: '' }
   const colonIdx = avatar.indexOf(':')
   if (colonIdx !== -1) {
     const maybeProvider = avatar.slice(0, colonIdx)
-    if (maybeProvider in PROVIDERS)
-      return { provider: maybeProvider as ProviderId, input: avatar.slice(colonIdx + 1) }
+    if (maybeProvider in PROVIDERS) {
+      return {
+        provider: maybeProvider as AvatarProviderId,
+        value: avatar.slice(colonIdx + 1),
+      }
+    }
   }
-  return { provider: 'qq', input: '' }
+  return { provider: 'qq', value: '' }
 }
 
 export function useAvatar(avatar: MaybeRefOrGetter<string | undefined>) {
   const initial = parseAvatar(toValue(avatar))
-  const avatarProvider = ref<ProviderId>(initial.provider)
-  const avatarInput = ref(initial.input)
+  const avatarProvider = ref<AvatarProviderId>(initial.provider)
+  const avatarValue = ref(initial.value)
   const avatarUrl = ref(defaultAvatar)
 
   watchEffect(() => {
-    const { provider, input } = parseAvatar(toValue(avatar))
+    const { provider, value } = parseAvatar(toValue(avatar))
     avatarProvider.value = provider
-    avatarInput.value = input
+    avatarValue.value = value
   })
 
   watchEffect(async () => {
-    avatarUrl.value = (await PROVIDERS[avatarProvider.value].resolve(avatarInput.value)) || defaultAvatar
+    avatarUrl.value = (await PROVIDERS[avatarProvider.value].resolve(avatarValue.value)) || defaultAvatar
   })
 
-  const avatarString = computed(() => `${avatarProvider.value}:${avatarInput.value}`)
+  const avatarString = computed(() => `${avatarProvider.value}:${avatarValue.value}`)
 
-  return { avatarProvider, avatarInput, avatarUrl, avatarString }
+  return { avatarProvider, avatarValue, avatarUrl, avatarString }
 }
 
 export default useAvatar
