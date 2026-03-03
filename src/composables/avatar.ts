@@ -1,9 +1,4 @@
-import type {
-  HTMLAttributes,
-  InputAutoCompleteAttribute,
-  InputTypeHTMLAttribute,
-  MaybeRefOrGetter,
-} from 'vue'
+import type { HTMLAttributes, InputAutoCompleteAttribute, InputTypeHTMLAttribute, MaybeRefOrGetter } from 'vue'
 import type { Awaitable } from '@/types'
 import { computed, ref, toValue, watchEffect } from 'vue'
 import defaultAvatar from '@/assets/default-avatar.svg'

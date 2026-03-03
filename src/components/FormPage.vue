@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
 
 const props = defineProps<{
   title: string
-  submitText: string
-  submittingText: string
-  disabled?: boolean
   submit: () => Promise<string | void>
 }>()
 
@@ -22,8 +17,11 @@ async function handleSubmit() {
   try {
     serverError.value = await props.submit() ?? ''
   }
-  catch (e) {
-    serverError.value = e instanceof Error ? e.message : String(e)
+  catch (error) {
+    serverError.value = error instanceof Error
+      ? error.message
+      : JSON.stringify(error)
+    console.error(error)
   }
   finally {
     loading.value = false
@@ -49,14 +47,7 @@ async function handleSubmit() {
           </CardContent>
 
           <CardFooter class="flex-col gap-2">
-            <Button
-              type="submit"
-              class="w-full"
-              :disabled="disabled || loading"
-            >
-              <Spinner v-if="loading" data-icon="inline-start" />
-              {{ loading ? submittingText : submitText }}
-            </Button>
+            <slot name="submit" :loading="loading" />
 
             <slot name="footer" />
           </CardFooter>

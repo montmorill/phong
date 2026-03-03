@@ -4,7 +4,6 @@ import useHitokoto from '@/composables/hitokoto'
 import { user } from '@/lib/api'
 
 const { t } = useI18n()
-
 const { hitokoto, fromLine } = useHitokoto()
 </script>
 

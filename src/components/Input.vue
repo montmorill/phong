@@ -11,13 +11,14 @@ const { validate } = defineProps<{
   optional?: boolean
   dirty?: boolean
   validate?: FieldValidator
+  error?: string
 }>()
 
 const modelValue = defineModel<string>('value')
-const validationError = defineModel<string>('error')
+const emit = defineEmits<{ 'update:error': [string] }>()
 
 watch(() => modelValue.value, (newValue) => {
-  validationError.value = validate?.(newValue || '') || ''
+  emit('update:error', validate?.(newValue || '') || '')
 })
 </script>
 
@@ -28,19 +29,22 @@ watch(() => modelValue.value, (newValue) => {
         {{ label }}
         <span v-if="!optional || dirty" class="text-destructive">*</span>
       </Label>
-      <div v-if="validationError" class="text-xs leading-none text-destructive">
-        {{ validationError }}
+      <div v-if="error" class="text-xs leading-none text-destructive">
+        {{ error }}
       </div>
     </div>
-    <Input
-      :id="id"
-      v-bind="$attrs"
-      spellcheck="false"
-      :required="!optional"
-      :class="validationError && 'border-destructive'"
-      :disabled="disabled"
-      :model-value="modelValue"
-      @update:model-value="modelValue = $event as string"
-    />
+    <div class="flex gap-2">
+      <slot name="prepend" />
+      <Input
+        :id="id"
+        v-bind="$attrs"
+        spellcheck="false"
+        :required="!optional"
+        :class="error && 'border-destructive'"
+        :disabled="disabled"
+        :model-value="modelValue"
+        @update:model-value="modelValue = $event as string"
+      />
+    </div>
   </div>
 </template>

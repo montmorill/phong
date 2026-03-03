@@ -18,7 +18,7 @@ export interface Field extends Omit<FieldOptions, 'value'> {
   error: Ref<string>
 }
 
-export function useFormFields<const T extends Record<string, FieldOptions>>(configs: T) {
+export function useFields<const T extends Record<string, FieldOptions>>(configs: T) {
   const fields = Object.fromEntries(
     Object.entries(configs).map(([key, config]) => [
       key,
@@ -31,15 +31,9 @@ export function useFormFields<const T extends Record<string, FieldOptions>>(conf
     ]),
   ) as { [K in keyof T]: Field }
 
-  const filled = computed(() =>
-    Object.values(fields).every(f => f.optional || f.disabled || Boolean(f.value.value)),
-  )
-  const hasErrors = computed(() =>
-    Object.values(fields).some(f => Boolean(f.error.value)),
-  )
-  const isDirty = computed(() =>
-    Object.values(fields).some(f => !f.disabled && f.value.value !== f.initial),
-  )
+  const filled = computed(() => Object.values(fields).every(f => f.optional || f.disabled || f.value.value))
+  const hasErrors = computed(() => Object.values(fields).some(f => f.error.value || (!f.optional && !f.value.value)))
+  const isDirty = computed(() => Object.values(fields).some(f => f.value.value !== f.initial))
 
   return { fields, filled, hasErrors, isDirty }
 }
