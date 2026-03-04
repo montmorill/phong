@@ -17,6 +17,7 @@ export const userCapabilities = sqliteTable('user_capabilities', {
 
 export const tibis = sqliteTable('tibis', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  parentId: integer('parent_id'),
   title: text('title'),
   content: text('content').notNull(),
   username: text('username').notNull().references(() => users.username),

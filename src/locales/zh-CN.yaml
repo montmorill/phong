@@ -67,6 +67,7 @@ field:
 common:
   cancel: 取消
   delete: 删除
+  back: 返回
 tibi:
   title: 题壁
   empty: 暂无题壁，成为第一个留壁的人吧
@@ -76,6 +77,12 @@ tibi:
   compose:
     placeholder: 在此留下你的题壁…
     submit: 题壁
+  readMore: 展开全文
+  notFound: 题壁不存在
+  replyCount: '{n} 条回复'
+  reply:
+    placeholder: 写下你的回复…
+    submit: 回复
   errors:
     postFailed: 发布失败，请稍后再试
 userPage:

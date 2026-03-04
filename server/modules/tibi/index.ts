@@ -1,7 +1,7 @@
 import { jwt } from '@elysiajs/jwt'
 import { Type as t } from '@sinclair/typebox'
 import { Elysia } from 'elysia'
-import { createTibiBody } from './model'
+import { createTibiBody, replyBody } from './model'
 import * as TibiService from './service'
 
 export default new Elysia()
@@ -62,4 +62,42 @@ export default new Elysia()
     if (result === null)
       return status(404, { message: 'error.tibiNotFound' })
     return { liked: result }
+  })
+  .get('/tibi/:id', async ({ headers, jwt, params, status }) => {
+    const authorization = headers.authorization ?? ''
+    let viewerUsername: string | undefined
+    if (authorization.startsWith('Bearer ')) {
+      const payload = await jwt.verify(authorization.slice(7))
+      if (payload && typeof payload.sub === 'string')
+        viewerUsername = payload.sub
+    }
+    const tibi = TibiService.get(Number(params.id), viewerUsername)
+    if (!tibi)
+      return status(404, { message: 'error.tibiNotFound' })
+    return tibi
+  })
+  .get('/tibi/:id/replies', async ({ headers, jwt, params }) => {
+    const authorization = headers.authorization ?? ''
+    let viewerUsername: string | undefined
+    if (authorization.startsWith('Bearer ')) {
+      const payload = await jwt.verify(authorization.slice(7))
+      if (payload && typeof payload.sub === 'string')
+        viewerUsername = payload.sub
+    }
+    return TibiService.listReplies(Number(params.id), viewerUsername)
+  })
+  .post('/tibi/:id/reply', async ({ headers, jwt, params, body, status }) => {
+    const authorization = headers.authorization ?? ''
+    if (!authorization.startsWith('Bearer '))
+      return status(401, { message: 'error.unauthorized' })
+    const payload = await jwt.verify(authorization.slice(7))
+    if (!payload || typeof payload.sub !== 'string')
+      return status(401, { message: 'error.tokenExpired' })
+    const parentExists = TibiService.get(Number(params.id))
+    if (!parentExists)
+      return status(404, { message: 'error.tibiNotFound' })
+    TibiService.create(payload.sub, body.content, undefined, Number(params.id))
+    return status(201, {})
+  }, {
+    body: replyBody,
   })

@@ -1,0 +1,1 @@
+ALTER TABLE `tibis` ADD `parent_id` integer;

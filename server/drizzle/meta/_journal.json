@@ -22,6 +22,13 @@
       "when": 1772612554170,
       "tag": "0002_mighty_jetstream",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1772621326251,
+      "tag": "0003_charming_corsair",
+      "breakpoints": true
     }
   ]
 }

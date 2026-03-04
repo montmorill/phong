@@ -1,10 +1,11 @@
-import { and, count, desc, eq } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNull, SQL } from 'drizzle-orm'
 import { db, tibiLikes, tibis, users } from 'server/db'
 
-export function list(viewerUsername?: string, filterUsername?: string) {
-  const rows = db
+function query(where?: SQL, order: 'asc' | 'desc' = 'desc') {
+  return db
     .select({
       id: tibis.id,
+      parentId: tibis.parentId,
       title: tibis.title,
       content: tibis.content,
       username: tibis.username,
@@ -16,23 +17,28 @@ export function list(viewerUsername?: string, filterUsername?: string) {
     .from(tibis)
     .leftJoin(users, eq(tibis.username, users.username))
     .leftJoin(tibiLikes, eq(tibis.id, tibiLikes.tibiId))
-    .where(filterUsername ? eq(tibis.username, filterUsername) : undefined)
+    .where(where)
     .groupBy(tibis.id)
-    .orderBy(desc(tibis.createdAt))
+    .orderBy(order === 'asc' ? asc(tibis.createdAt) : desc(tibis.createdAt))
     .all()
+}
 
-  let likedIds = new Set<number>()
-  if (viewerUsername) {
-    const liked = db
-      .select({ tibiId: tibiLikes.tibiId })
-      .from(tibiLikes)
-      .where(eq(tibiLikes.username, viewerUsername))
-      .all()
-    likedIds = new Set(liked.map(r => r.tibiId))
-  }
+function getLikedIds(viewerUsername?: string): Set<number> {
+  if (!viewerUsername)
+    return new Set()
+  const liked = db
+    .select({ tibiId: tibiLikes.tibiId })
+    .from(tibiLikes)
+    .where(eq(tibiLikes.username, viewerUsername))
+    .all()
+  return new Set(liked.map(r => r.tibiId))
+}
 
-  return rows.map(row => ({
+type Row = ReturnType<typeof query>[number]
+function toItem(row: Row, likedIds: Set<number>) {
+  return {
     id: row.id,
+    parentId: row.parentId ?? undefined,
     title: row.title ?? undefined,
     content: row.content,
     username: row.username,
@@ -41,11 +47,36 @@ export function list(viewerUsername?: string, filterUsername?: string) {
     createdAt: row.createdAt!.getTime(),
     likeCount: row.likeCount,
     liked: likedIds.has(row.id),
-  }))
+  }
 }
 
-export function create(username: string, content: string, title?: string) {
-  db.insert(tibis).values({ username, title: title || null, content }).run()
+export function list(viewerUsername?: string, filterUsername?: string) {
+  const rows = query(
+    and(
+      filterUsername ? eq(tibis.username, filterUsername) : undefined,
+      isNull(tibis.parentId),
+    ),
+  )
+  const likedIds = getLikedIds(viewerUsername)
+  return rows.map(r => toItem(r, likedIds))
+}
+
+export function get(id: number, viewerUsername?: string) {
+  const rows = query(eq(tibis.id, id))
+  const row = rows[0]
+  if (!row)
+    return null
+  return toItem(row, getLikedIds(viewerUsername))
+}
+
+export function listReplies(parentId: number, viewerUsername?: string) {
+  const rows = query(eq(tibis.parentId, parentId), 'asc')
+  const likedIds = getLikedIds(viewerUsername)
+  return rows.map(r => toItem(r, likedIds))
+}
+
+export function create(username: string, content: string, title?: string, parentId?: number) {
+  db.insert(tibis).values({ username, title: title || null, content, parentId: parentId ?? null }).run()
 }
 
 export function remove(id: number, username: string): 'ok' | 'not_found' | 'forbidden' {

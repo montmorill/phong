@@ -5,3 +5,8 @@ export const createTibiBody = t.Object({
   content: t.String({ minLength: 1, maxLength: 3000 }),
 })
 export type CreateTibiBody = typeof createTibiBody.static
+
+export const replyBody = t.Object({
+  content: t.String({ minLength: 1, maxLength: 3000 }),
+})
+export type ReplyBody = typeof replyBody.static
