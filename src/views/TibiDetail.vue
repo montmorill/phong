@@ -139,6 +139,10 @@ function onDeleted() {
   router.back()
 }
 
+function onReplyDeleted(id: number) {
+  thread.value = thread.value.filter(item => item.id !== id)
+}
+
 onMounted(load)
 </script>
 
@@ -189,9 +193,10 @@ onMounted(load)
             <ReplyItem
               v-bind="item"
               @reply="startReply(item.id)"
+              @deleted="onReplyDeleted"
             />
             <div v-if="replyingToId === item.id" ref="composeRef" class="border rounded-lg p-3 space-y-2 mb-2 ml-10">
-              <p class="text-xs text-muted-foreground">回复 @{{ item.nickname }}</p>
+              <p class="text-xs text-muted-foreground">@{{ item.nickname }}</p>
               <Textarea
                 v-model="replyContent"
                 :maxlength="maxLength"

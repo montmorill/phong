@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Heart, MessageSquare, Trash2 } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import useAvatar from '@/composables/avatar'
+import useTimeStr from '@/composables/useTimeStr'
 import { api, user } from '@/lib/api'
 
 const props = defineProps<{
@@ -28,29 +29,15 @@ const emit = defineEmits<{
   liked: [id: number, liked: boolean, likeCount: number]
   reply: []
 }>()
-// Shared reactive clock — one interval for all TibiCard instances
-const now = ref(Date.now())
-let timerRefs = 0
-let timer: ReturnType<typeof setInterval> | null = null
 
 const { t } = useI18n()
 const router = useRouter()
 const { avatarUrl } = useAvatar(() => props.avatar)
+const timeStr = useTimeStr()
 
 const renderedContent = computed(() =>
   props.content.trim().replace(/\n/g, '<br>'),
 )
-
-const timeStr = computed(() => {
-  const diff = now.value - props.createdAt
-  if (diff < 60_000)
-    return '刚刚'
-  if (diff < 3_600_000)
-    return `${Math.floor(diff / 60_000)} 分钟前`
-  if (diff < 86_400_000)
-    return `${Math.floor(diff / 3_600_000)} 小时前`
-  return new Date(props.createdAt).toLocaleDateString('zh-CN')
-})
 
 const isOwn = computed(() => user.value?.username === props.username)
 const deleting = ref(false)
@@ -59,20 +46,11 @@ const contentRef = ref<HTMLElement | null>(null)
 const overflows = ref(false)
 
 onMounted(() => {
-  if (timerRefs++ === 0)
-    timer = setInterval(() => { now.value = Date.now() }, 60_000)
   if (!props.expanded) {
     requestAnimationFrame(() => {
       if (contentRef.value)
         overflows.value = contentRef.value.scrollHeight > contentRef.value.clientHeight
     })
-  }
-})
-
-onUnmounted(() => {
-  if (--timerRefs === 0 && timer) {
-    clearInterval(timer)
-    timer = null
   }
 })
 
@@ -109,10 +87,10 @@ async function confirmDelete() {
           <RouterLink :to="`/@${username}`" class="text-sm font-medium hover:underline">
             {{ nickname }}
           </RouterLink>
-          <span class="text-xs text-muted-foreground">{{ timeStr }}</span>
+          <span class="text-xs text-muted-foreground">{{ timeStr(createdAt) }}</span>
         </div>
       </div>
-      <div class="cursor-pointer" @click="router.push(`/tibi/${props.id}#reply`)">
+      <div :class="expanded ? '' : 'cursor-pointer'" @click="router.push(`/tibi/${props.id}#reply`)">
         <p v-if="title" class="font-semibold text-sm mb-1">{{ title }}</p>
         <div class="relative">
           <div

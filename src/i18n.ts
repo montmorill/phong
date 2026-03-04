@@ -8,4 +8,9 @@ export const i18n = createI18n({
   messages: {
     'zh-CN': zhCN,
   },
+  datetimeFormats: {
+    'zh-CN': {
+      short: { year: 'numeric', month: 'numeric', day: 'numeric' },
+    },
+  },
 })

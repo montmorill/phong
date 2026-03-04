@@ -75,6 +75,7 @@ tibi:
   loginRequired: '{login}后才能题壁'
   deleteConfirm: 删除题壁
   deleteDescription: 此操作不可撤销，题壁将被永久删除。
+  replyTo: 回复 {nickname}：{content}
   compose:
     placeholder: 在此留下你的题壁…
     submit: 题壁
@@ -86,6 +87,10 @@ tibi:
     submit: 回复
   errors:
     postFailed: 发布失败，请稍后再试
+time:
+  justNow: 刚刚
+  minutesAgo: '{n} 分钟前'
+  hoursAgo: '{n} 小时前'
 inbox:
   title: 收件箱
   empty: 暂无通知

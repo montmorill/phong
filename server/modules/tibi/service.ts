@@ -14,7 +14,7 @@ function query(where?: SQL, order: 'asc' | 'desc' = 'desc') {
       avatar: users.avatar,
       createdAt: tibis.createdAt,
       likeCount: count(tibiLikes.username),
-      replyCount: sql<number>`(select count(*) from ${tibis} r where r.parent_id = ${tibis.id})`,
+      replyCount: sql<number>`(WITH RECURSIVE tree(id) AS (SELECT id FROM tibis WHERE parent_id = ${tibis.id} UNION ALL SELECT t.id FROM tibis t INNER JOIN tree ON t.parent_id = tree.id) SELECT COUNT(*) FROM tree)`,
     })
     .from(tibis)
     .leftJoin(users, eq(tibis.username, users.username))

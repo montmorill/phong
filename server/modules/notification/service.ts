@@ -23,16 +23,13 @@ bus.on('event', (event: AppEvent) => {
 })
 
 export function list(username: string) {
-  const actors = db.$with('actors').as(
-    db.select({ username: users.username, nickname: users.nickname, avatar: users.avatar }).from(users),
-  )
   const rows = db
     .select({
       id: notifications.id,
       type: notifications.type,
       actorUsername: notifications.actorUsername,
-      actorNickname: actors.nickname,
-      actorAvatar: actors.avatar,
+      actorNickname: users.nickname,
+      actorAvatar: users.avatar,
       tibiId: notifications.tibiId,
       tibiContent: tibis.content,
       replyId: notifications.replyId,
@@ -40,7 +37,7 @@ export function list(username: string) {
       createdAt: notifications.createdAt,
     })
     .from(notifications)
-    .leftJoin(actors, eq(notifications.actorUsername, actors.username))
+    .leftJoin(users, eq(notifications.actorUsername, users.username))
     .leftJoin(tibis, eq(notifications.tibiId, tibis.id))
     .where(eq(notifications.username, username))
     .orderBy(desc(notifications.createdAt))

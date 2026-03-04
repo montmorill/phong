@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Spinner } from '@/components/ui/spinner'
 import { parseAvatar, PROVIDERS } from '@/composables/avatar'
+import useTimeStr from '@/composables/useTimeStr'
 import { api, unreadCount } from '@/lib/api'
 
 interface NotificationItem {
@@ -23,6 +24,7 @@ interface NotificationItem {
 
 const { t } = useI18n()
 const router = useRouter()
+const timeStr = useTimeStr()
 
 const items = ref<NotificationItem[]>([])
 const loading = ref(true)
@@ -41,17 +43,6 @@ function resolveAvatarUrl(avatar: string): string {
   if (provider === 'qq' && value)
     return PROVIDERS.qq.resolve(value)
   return ''
-}
-
-function timeStr(createdAt: number): string {
-  const diff = Date.now() - createdAt
-  if (diff < 60_000)
-    return '刚刚'
-  if (diff < 3_600_000)
-    return `${Math.floor(diff / 60_000)} 分钟前`
-  if (diff < 86_400_000)
-    return `${Math.floor(diff / 3_600_000)} 小时前`
-  return new Date(createdAt).toLocaleDateString('zh-CN')
 }
 
 function navigate(item: NotificationItem) {

@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { Heart, MessageSquare } from 'lucide-vue-next'
+import { Heart, MessageSquare, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import useAvatar from '@/composables/avatar'
+import useTimeStr from '@/composables/useTimeStr'
 import { api, user } from '@/lib/api'
 
 const props = defineProps<{
@@ -24,25 +27,19 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   reply: [id: number]
+  deleted: [id: number]
 }>()
 
+const { t } = useI18n()
 const router = useRouter()
 const { avatarUrl } = useAvatar(() => props.avatar)
+const timeStr = useTimeStr()
 
 const localLiked = ref(props.liked)
 const localLikeCount = ref(props.likeCount)
+const deleting = ref(false)
 
-const timeStr = computed(() => {
-  const diff = Date.now() - props.createdAt
-  if (diff < 60_000)
-    return '刚刚'
-  if (diff < 3_600_000)
-    return `${Math.floor(diff / 60_000)} 分钟前`
-  if (diff < 86_400_000)
-    return `${Math.floor(diff / 3_600_000)} 小时前`
-  return new Date(props.createdAt).toLocaleDateString('zh-CN')
-})
-
+const isOwn = computed(() => user.value?.username === props.username)
 const renderedContent = computed(() => props.content.trim().replace(/\n/g, '<br>'))
 
 function jumpToParent() {
@@ -71,6 +68,13 @@ async function handleLike() {
     localLiked.value = data.liked
   }
 }
+
+async function confirmDelete() {
+  deleting.value = true
+  await api.tibi({ id: props.id }).delete()
+  deleting.value = false
+  emit('deleted', props.id)
+}
 </script>
 
 <template>
@@ -86,7 +90,7 @@ async function handleLike() {
         <RouterLink :to="`/@${username}`" class="text-sm font-medium hover:underline">
           {{ nickname }}
         </RouterLink>
-        <span class="text-xs text-muted-foreground">{{ timeStr }}</span>
+        <span class="text-xs text-muted-foreground">{{ timeStr(createdAt) }}</span>
       </div>
       <a
         v-if="parentUsername && parentId"
@@ -94,7 +98,10 @@ async function handleLike() {
         class="text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors block"
         @click.prevent="jumpToParent"
       >
-        ↩ @{{ parentNickname }}：{{ parentContent }}
+        {{ t('tibi.replyTo', {
+          nickname: parentNickname,
+          content: parentContent,
+        }) }}
       </a>
       <div class="text-sm" v-html="renderedContent" />
       <div class="flex items-center gap-0 -ml-2 mt-0.5">
@@ -115,8 +122,35 @@ async function handleLike() {
           @click="emit('reply', id)"
         >
           <MessageSquare class="size-3" />
-          回复
+          {{ t('tibi.reply.submit') }}
         </Button>
+        <AlertDialog v-if="isOwn">
+          <AlertDialogTrigger as-child>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="text-muted-foreground hover:text-destructive h-6 px-2"
+            >
+              <Trash2 class="size-3" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{{ t('tibi.deleteConfirm') }}</AlertDialogTitle>
+              <AlertDialogDescription>{{ t('tibi.deleteDescription') }}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+              <AlertDialogAction
+                class="bg-destructive text-white hover:bg-destructive/90"
+                :disabled="deleting"
+                @click.prevent="confirmDelete"
+              >
+                {{ t('common.delete') }}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   </div>
