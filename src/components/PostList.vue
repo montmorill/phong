@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import PostCard from '@/components/PostCard.vue'
+import PostItem from '@/components/PostItem.vue'
 import { api } from '@/lib/api'
 
-const props = defineProps<{ username?: string, disableUserLink?: boolean }>()
+const props = defineProps<{
+  username?: string
+  disableUserLink?: boolean
+}>()
 
 const { t } = useI18n()
 
-type PostItem = NonNullable<Awaited<ReturnType<typeof api.posts.get>>['data']>[number]
+type PostData = NonNullable<Awaited<ReturnType<typeof api.posts.get>>['data']>[number]
 
-const posts = ref<PostItem[]>([])
+const posts = ref<PostData[]>([])
 const loaded = ref(false)
 
 async function load() {
@@ -40,7 +43,7 @@ defineExpose({ reload: load })
   <div v-if="loaded && posts.length === 0" class="text-center text-muted-foreground py-8">
     {{ t('post.empty') }}
   </div>
-  <PostCard
+  <PostItem
     v-for="post in posts"
     :key="post.id"
     v-bind="post"

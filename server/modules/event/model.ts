@@ -1,4 +1,4 @@
-import { Type as t } from '@sinclair/typebox'
+import { t } from 'elysia'
 
 export const subscribeBody = t.Object({
   url: t.String({ minLength: 1 }),

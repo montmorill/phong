@@ -34,7 +34,27 @@ bus.on('event', (event: AppEvent) => {
 
 const encoder = new TextEncoder()
 
+// WebSocket clients set
+const wsClients = new Set<{ send: (data: string) => void }>()
+
+bus.on('event', (event: AppEvent) => {
+  if (!event.topic.startsWith('post.'))
+    return
+  const msg = JSON.stringify({ topic: event.topic, payload: event.payload })
+  for (const ws of wsClients)
+    ws.send(msg)
+})
+
 export default new Elysia()
+  .ws('/ws', {
+    open(ws) {
+      wsClients.add(ws)
+    },
+    close(ws) {
+      wsClients.delete(ws)
+    },
+    message() {},
+  })
   .get('/sse', () => {
     let handler: (event: AppEvent) => void
     const stream = new ReadableStream({

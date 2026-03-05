@@ -1,4 +1,4 @@
-import { Type as t } from '@sinclair/typebox'
+import { t } from 'elysia'
 
 export const createPostBody = t.Object({
   title: t.Optional(t.String({ maxLength: 100 })),

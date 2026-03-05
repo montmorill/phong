@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Heart, MessageSquare } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import UserAvatar from '@/components/UserAvatar.vue'
 import useTimeStr from '@/composables/useTimeStr'
 import { api, user } from '@/lib/api'
@@ -19,10 +18,13 @@ const props = defineProps<{
   avatar: string
   createdAt: number
   likeCount: number
-  replyCount: number
+  replyCount?: number
   liked: boolean
   expanded?: boolean
   disableUserLink?: boolean
+  parentId?: number
+  parentNickname?: string
+  parentContent?: string
 }>()
 
 const emit = defineEmits<{
@@ -41,6 +43,11 @@ const isOwn = computed(() => user.value?.username === props.username)
 const contentRef = ref<HTMLElement | null>(null)
 const overflows = ref(false)
 const deleting = ref(false)
+const localLiked = ref(props.liked)
+const localLikeCount = ref(props.likeCount)
+
+watch(() => props.liked, v => (localLiked.value = v))
+watch(() => props.likeCount, v => (localLikeCount.value = v))
 
 onMounted(() => {
   if (!props.expanded) {
@@ -58,7 +65,9 @@ async function handleLike() {
   }
   const { data } = await api.posts({ id: props.id }).like.post()
   if (data) {
-    emit('liked', props.id, data.liked, props.likeCount + (data.liked ? 1 : -1))
+    localLikeCount.value += data.liked ? 1 : -1
+    localLiked.value = data.liked
+    emit('liked', props.id, localLiked.value, localLikeCount.value)
   }
 }
 
@@ -78,50 +87,51 @@ function handleReplyClick() {
 </script>
 
 <template>
-  <Card>
-    <CardHeader class="pb-3 gap-2 select-none">
-      <div class="flex items-center gap-2">
+  <div class="rounded-lg border bg-card text-card-foreground">
+    <div class="flex gap-3 px-4 pt-4 pb-1">
+      <div class="shrink-0">
         <component :is="disableUserLink ? 'span' : RouterLink" :to="`/@${username}`">
           <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" />
         </component>
-        <div class="flex flex-col leading-none gap-0.5">
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-baseline gap-1.5 select-none">
           <component
             :is="disableUserLink ? 'span' : RouterLink"
             :to="`/@${username}`"
-            class="text-sm font-medium"
+            class="text-sm font-semibold"
             :class="{ 'hover:underline': !disableUserLink }"
           >
             {{ nickname }}
           </component>
-          <span class="text-xs text-muted-foreground">{{ timeStr(createdAt) }}</span>
+          <span class="text-xs text-muted-foreground">· {{ timeStr(createdAt) }}</span>
         </div>
+        <RouterLink
+          v-if="parentId && parentNickname"
+          :to="`/post/${parentId}`"
+          class="text-xs text-muted-foreground hover:text-foreground transition-colors block mb-0.5"
+        >
+          {{ t('post.replyTo', { nickname: parentNickname, content: parentContent }) }}
+        </RouterLink>
+        <RouterLink :to="`/post/${id}`" class="block mt-1">
+          <p v-if="title" class="font-semibold text-sm mb-0.5">{{ title }}</p>
+          <div class="relative">
+            <div
+              ref="contentRef"
+              class="text-sm"
+              :style="expanded ? undefined : 'max-height: 12rem; overflow: hidden'"
+              v-html="renderedContent"
+            />
+            <div
+              v-if="overflows"
+              class="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-card to-transparent"
+            />
+          </div>
+        </RouterLink>
       </div>
-    </CardHeader>
-    <CardContent class="pb-2" :class="{ 'cursor-pointer': !expanded }">
-      <RouterLink :to="`/post/${id}`" class="max-w-none">
-        <CardTitle v-if="title" class="text-base">{{ title }}</CardTitle>
-        <div class="relative">
-          <div
-            ref="contentRef"
-            class="max-w-none"
-            :style="expanded ? undefined : 'max-height: 12rem; overflow: hidden'"
-            v-html="renderedContent"
-          />
-          <div
-            v-if="overflows"
-            class="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-card to-transparent"
-          />
-        </div>
-      </RouterLink>
-    </CardContent>
-    <CardFooter class="relative flex-row-reverse items-start justify-between select-none">
-      <div class="flex gap-1">
-        <DeleteConfirmDialog
-          v-if="isOwn"
-          :deleting="deleting"
-          button-class="h-7 px-2 leading-none"
-          @confirm="confirmDelete"
-        />
+    </div>
+    <div class="flex items-center px-2 py-1.5 justify-between select-none">
+      <div class="flex gap-0">
         <Button
           variant="ghost"
           size="sm"
@@ -129,22 +139,34 @@ function handleReplyClick() {
           @click="handleReplyClick"
         >
           <MessageSquare class="size-4" />
-          {{ replyCount }}
+          <span v-if="replyCount !== undefined">{{ replyCount }}</span>
         </Button>
         <Button
           variant="ghost"
           size="sm"
           class="gap-1 h-7 px-2 leading-none"
-          :class="liked ? 'text-red-500' : 'text-muted-foreground'"
+          :class="localLiked ? 'text-red-500' : 'text-muted-foreground'"
           @click="handleLike"
         >
-          <Heart class="size-4" :class="{ 'fill-current': liked }" />
-          {{ likeCount }}
+          <Heart class="size-4" :class="{ 'fill-current': localLiked }" />
+          {{ localLikeCount || '' }}
         </Button>
       </div>
-      <div v-if="overflows" class="text-xs text-muted-foreground">
-        <RouterLink :to="`/post/${id}`" class="hover:underline">{{ t('post.readMore') }}</RouterLink>
+      <div class="flex items-center gap-1">
+        <RouterLink
+          v-if="overflows"
+          :to="`/post/${id}`"
+          class="text-xs text-muted-foreground hover:underline"
+        >
+          {{ t('post.readMore') }}
+        </RouterLink>
+        <DeleteConfirmDialog
+          v-if="isOwn"
+          :deleting="deleting"
+          button-class="h-7 px-2 leading-none"
+          @confirm="confirmDelete"
+        />
       </div>
-    </CardFooter>
-  </Card>
+    </div>
+  </div>
 </template>

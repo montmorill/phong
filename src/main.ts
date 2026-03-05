@@ -12,6 +12,7 @@ const router = createRouter({
     { path: '/login', component: () => import('@/views/Login.vue'), meta: { guestOnly: true } },
     { path: '/signup', component: () => import('@/views/Signup.vue'), meta: { guestOnly: true } },
     { path: '/settings', component: () => import('@/views/Profile.vue'), meta: { authRequired: true } },
+    { path: '/bind', component: () => import('@/views/Bind.vue'), meta: { authRequired: true } },
     { path: '/inbox', component: () => import('@/views/Inbox.vue'), meta: { authRequired: true } },
     { path: '/post', component: () => import('@/views/PostPage.vue') },
     { path: '/post/:id', component: () => import('@/views/PostDetail.vue'), props: route => ({ id: Number(route.params.id) }) },

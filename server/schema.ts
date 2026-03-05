@@ -31,6 +31,14 @@ export const postLikes = sqliteTable('post_likes', {
   primaryKey({ columns: [table.postId, table.username] }),
 ])
 
+export const userBindings = sqliteTable('user_bindings', {
+  username: text('username').notNull().references(() => users.username),
+  platform: text('platform').notNull(), // 'qq' | 'github' | 'weibo'
+  platformId: text('platform_id').notNull(),
+}, table => [
+  primaryKey({ columns: [table.username, table.platform] }),
+])
+
 export const notifications = sqliteTable('notifications', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').notNull().references(() => users.username),

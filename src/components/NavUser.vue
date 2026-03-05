@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Inbox, LogOut, Settings, User } from 'lucide-vue-next'
+import { Inbox, Link, LogOut, Settings, User } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -39,6 +39,12 @@ function logout() {
           <span v-if="unreadCount > 0" class="ml-auto text-xs font-medium bg-blue-500 text-white rounded-full px-1.5 py-0.5 leading-none">
             {{ unreadCount }}
           </span>
+        </RouterLink>
+      </DropdownMenuItem>
+      <DropdownMenuItem as-child>
+        <RouterLink to="/bind" class="flex items-center gap-2 cursor-pointer">
+          <Link class="size-4" />
+          {{ $t('nav.bind') }}
         </RouterLink>
       </DropdownMenuItem>
       <DropdownMenuItem as-child>

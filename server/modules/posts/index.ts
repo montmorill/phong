@@ -1,6 +1,5 @@
 import { jwt } from '@elysiajs/jwt'
-import { Type as t } from '@sinclair/typebox'
-import { Elysia } from 'elysia'
+import { Elysia, t } from 'elysia'
 import { bus } from '../event/bus'
 import { createPostBody, replyBody } from './model'
 import * as PostService from './service'

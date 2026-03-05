@@ -1,4 +1,4 @@
-import { Type as t } from '@sinclair/typebox'
+import { t } from 'elysia'
 
 export const signupBody = t.Object({
   username: t.String({ minLength: 3, maxLength: 20, pattern: '^\\w+$' }),

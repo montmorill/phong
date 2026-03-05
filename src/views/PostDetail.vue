@@ -2,17 +2,16 @@
 import type * as PostService from 'server/modules/posts/service'
 import { ChevronLeft } from 'lucide-vue-next'
 import { replyBody } from 'server/modules/posts/model'
-import { nextTick, onMounted, provide, ref, watch } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import PostCard from '@/components/PostCard.vue'
-import PostReply from '@/components/PostReply.vue'
+import PostItem from '@/components/PostItem.vue'
 import ReplyCompose from '@/components/ReplyCompose.vue'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { api, user } from '@/lib/api'
 
-type PostItem = NonNullable<ReturnType<typeof PostService.get>>
+type PostData = NonNullable<ReturnType<typeof PostService.get>>
 type ThreadItem = ReturnType<typeof PostService.listThread>[number]
 
 const props = defineProps<{ id: number }>()
@@ -21,7 +20,8 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
-const post = ref<PostItem | null>(null)
+const post = ref<PostData | null>(null)
+const ancestors = ref<PostData[]>([])
 const thread = ref<ThreadItem[]>([])
 const loading = ref(true)
 const notFound = ref(false)
@@ -33,15 +33,21 @@ const serverError = ref('')
 const maxLength = replyBody.properties.content.maxLength!
 
 const composeRef = ref<InstanceType<typeof ReplyCompose> | null>(null)
-const threadRootRef = ref<HTMLElement | null>(null)
 
-const threadElMap = new Map<number, HTMLElement>()
-provide('threadElMap', threadElMap)
-
-watch(threadRootRef, (el) => {
-  if (el)
-    threadElMap.set(0, el)
-})
+async function loadAncestors(item: PostData) {
+  ancestors.value = []
+  const chain: PostData[] = []
+  let currentParentId = item.parentId
+  while (currentParentId) {
+    const { data } = await api.posts({ id: currentParentId }).get()
+    if (!data)
+      break
+    const parent = data as PostData
+    chain.unshift(parent)
+    currentParentId = parent.parentId
+  }
+  ancestors.value = chain
+}
 
 async function load() {
   loading.value = true
@@ -53,14 +59,9 @@ async function load() {
     return
   }
 
-  const item = postData as PostItem
-  if (item.rootId !== item.id) {
-    router.replace(`/post/${item.rootId}`)
-    return
-  }
-
+  const item = postData as PostData
   post.value = item
-  await loadThread()
+  await Promise.all([loadThread(), loadAncestors(item)])
 
   if (route.hash === '#reply' && user.value)
     startReply(props.id)
@@ -134,9 +135,14 @@ onMounted(load)
       {{ t('post.notFound') }}
     </div>
     <template v-else-if="post">
-      <div ref="threadRootRef">
-        <PostCard v-bind="post" expanded @liked="onLiked" @deleted="onDeleted" @reply="startReply(post.id)" />
-      </div>
+      <PostItem
+        v-for="ancestor in ancestors"
+        :key="ancestor.id"
+        v-bind="ancestor"
+        class="opacity-70"
+      />
+
+      <PostItem v-bind="post" expanded @liked="onLiked" @deleted="onDeleted" @reply="startReply(post.id)" />
 
       <ReplyCompose
         v-if="replyingToId === post.id"
@@ -150,29 +156,24 @@ onMounted(load)
         @cancel="cancelReply"
       />
 
-      <div v-if="thread.length">
-        <template v-for="item in thread" :key="item.id">
-          <div>
-            <PostReply
-              v-bind="item"
-              @reply="startReply(item.id)"
-              @deleted="onReplyDeleted"
-            />
-            <ReplyCompose
-              v-if="replyingToId === item.id"
-              ref="composeRef"
-              v-model="replyContent"
-              :max-length="maxLength"
-              :submitting="submitting"
-              :server-error="serverError"
-              :reply-to="item.nickname"
-              class="mb-2 ml-10"
-              @submit="submitReply"
-              @cancel="cancelReply"
-            />
-          </div>
-        </template>
-      </div>
+      <template v-for="item in thread" :key="item.id">
+        <PostItem
+          v-bind="item"
+          @reply="startReply(item.id)"
+          @deleted="onReplyDeleted"
+        />
+        <ReplyCompose
+          v-if="replyingToId === item.id"
+          ref="composeRef"
+          v-model="replyContent"
+          :max-length="maxLength"
+          :submitting="submitting"
+          :server-error="serverError"
+          :reply-to="item.nickname"
+          @submit="submitReply"
+          @cancel="cancelReply"
+        />
+      </template>
     </template>
   </div>
 </template>
