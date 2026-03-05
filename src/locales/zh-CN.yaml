@@ -11,6 +11,7 @@ nav:
   profile: 个人主页
   inbox: 收件箱
   bind: 账号绑定
+  admin: 管理后台
   settings: 资料设置
   logout: 退出登录
   post: 题壁

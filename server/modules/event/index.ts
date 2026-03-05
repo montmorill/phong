@@ -24,6 +24,7 @@ bus.on('event', (event: AppEvent) => {
     if (!topics.some(p => matchesTopic(p, event.topic)))
       continue
     const auth = `Basic ${Buffer.from(`${username}:`).toString('base64')}`
+    console.warn(`[webhook:${username}] delivering topic=${event.topic} to ${url}`)
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': auth },

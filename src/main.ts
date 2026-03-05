@@ -1,3 +1,4 @@
+/* eslint-disable antfu/no-top-level-await */
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
@@ -13,6 +14,7 @@ const router = createRouter({
     { path: '/signup', component: () => import('@/views/Signup.vue'), meta: { guestOnly: true } },
     { path: '/settings', component: () => import('@/views/Profile.vue'), meta: { authRequired: true } },
     { path: '/bind', component: () => import('@/views/Bind.vue'), meta: { authRequired: true } },
+    { path: '/admin', component: () => import('@/views/Admin.vue'), meta: { authRequired: true, adminRequired: true } },
     { path: '/inbox', component: () => import('@/views/Inbox.vue'), meta: { authRequired: true } },
     { path: '/post', component: () => import('@/views/PostPage.vue') },
     { path: '/post/:id', component: () => import('@/views/PostDetail.vue'), props: route => ({ id: Number(route.params.id) }) },
@@ -25,12 +27,12 @@ router.beforeEach((to) => {
     return '/'
   if (to.meta.authRequired && !user.value)
     return '/login'
+  if (to.meta.adminRequired && !user.value?.capabilities.includes('admin'))
+    return '/'
 })
 
 if (localStorage.getItem('token')) {
-  // eslint-disable-next-line antfu/no-top-level-await
   await fetchUser()
-  // eslint-disable-next-line antfu/no-top-level-await
   await fetchUnreadCount()
 }
 

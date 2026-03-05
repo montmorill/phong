@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import { Inbox, Link, LogOut, Settings, User } from 'lucide-vue-next'
+import type { UserProfile } from '@server/auth/model'
+import { Inbox, Link, LogOut, Settings, ShieldCheck, User } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import UserAvatar from '@/components/UserAvatar.vue'
-import { clearAuth, unreadCount } from '@/lib/api'
+import { clearAuth, unreadCount, user } from '@/lib/api'
 
-defineProps<{
-  username: string
-  nickname: string
-  avatar: string
-}>()
+defineProps<UserProfile>()
 
 const router = useRouter()
 
@@ -51,6 +48,12 @@ function logout() {
         <RouterLink to="/settings" class="flex items-center gap-2 cursor-pointer">
           <Settings class="size-4" />
           {{ $t('nav.settings') }}
+        </RouterLink>
+      </DropdownMenuItem>
+      <DropdownMenuItem v-if="user?.capabilities.includes('admin')" as-child>
+        <RouterLink to="/admin" class="flex items-center gap-2 cursor-pointer">
+          <ShieldCheck class="size-4" />
+          {{ $t('nav.admin') }}
         </RouterLink>
       </DropdownMenuItem>
       <DropdownMenuSeparator />

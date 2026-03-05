@@ -1,3 +1,4 @@
+import type { Equal, Expect } from '@/types'
 import { t } from 'elysia'
 
 export const signupBody = t.Object({
@@ -28,6 +29,7 @@ export type ChangePasswordBody = typeof changePasswordBody.static
 export const capability = t.Union([
   t.Literal('event.subscribe'),
   t.Literal('event.publish'),
+  t.Literal('admin'),
 ])
 export type Capability = typeof capability.static
 
@@ -37,4 +39,10 @@ export const userProfile = t.Object({
   avatar: t.String(),
   capabilities: t.Array(capability),
 })
-export type UserProfile = typeof userProfile.static
+export interface UserProfile {
+  username: string
+  nickname: string
+  avatar: string
+  capabilities: Capability[]
+}
+declare const _: Expect<Equal<UserProfile, typeof userProfile.static>>
