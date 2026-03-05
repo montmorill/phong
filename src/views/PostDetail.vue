@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { replyBody } from '@server/tibi/model'
+import { replyBody } from '@server/post/model'
 import { ChevronLeft } from 'lucide-vue-next'
 import { nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import PostCard from '@/components/PostCard.vue'
 import ReplyItem from '@/components/ReplyItem.vue'
-import TibiCard from '@/components/TibiCard.vue'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { api, user } from '@/lib/api'
 
-interface TibiItem {
+interface PostItem {
   id: number
   parentId?: number
   title?: string
@@ -47,7 +47,7 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
-const tibi = ref<TibiItem | null>(null)
+const post = ref<PostItem | null>(null)
 const thread = ref<ThreadItem[]>([])
 const loading = ref(true)
 const notFound = ref(false)
@@ -62,21 +62,21 @@ const composeRef = ref<HTMLElement | null>(null)
 
 async function load() {
   loading.value = true
-  const { data: tibiData } = await api.tibi({ id: props.id }).get()
+  const { data: postData } = await api.post({ id: props.id }).get()
   loading.value = false
 
-  if (!tibiData) {
+  if (!postData) {
     notFound.value = true
     return
   }
 
-  const item = tibiData as TibiItem
+  const item = postData as PostItem
   if (item.rootId !== item.id) {
-    router.replace(`/tibi/${item.rootId}`)
+    router.replace(`/post/${item.rootId}`)
     return
   }
 
-  tibi.value = item
+  post.value = item
   await loadThread()
 
   if (route.hash === '#reply' && user.value)
@@ -84,7 +84,7 @@ async function load() {
 }
 
 async function loadThread() {
-  const { data } = await api.tibi({ id: props.id }).thread.get()
+  const { data } = await api.post({ id: props.id }).thread.get()
   if (data)
     thread.value = data as ThreadItem[]
 }
@@ -110,10 +110,10 @@ async function submitReply() {
     return
   submitting.value = true
   serverError.value = ''
-  const { error } = await api.tibi({ id: replyingToId.value }).reply.post({ content: replyContent.value.trim() })
+  const { error } = await api.post({ id: replyingToId.value }).reply.post({ content: replyContent.value.trim() })
   submitting.value = false
   if (error) {
-    serverError.value = t('tibi.errors.postFailed')
+    serverError.value = t('post.errors.postFailed')
     return
   }
   replyContent.value = ''
@@ -131,8 +131,8 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 function onLiked(_id: number, liked: boolean, likeCount: number) {
-  if (tibi.value)
-    tibi.value = { ...tibi.value, liked, likeCount }
+  if (post.value)
+    post.value = { ...post.value, liked, likeCount }
 }
 
 function onDeleted() {
@@ -157,17 +157,17 @@ onMounted(load)
       <Spinner />
     </div>
     <div v-else-if="notFound" class="text-center text-muted-foreground py-8">
-      {{ t('tibi.notFound') }}
+      {{ t('post.notFound') }}
     </div>
-    <template v-else-if="tibi">
+    <template v-else-if="post">
       <div id="thread-root">
-        <TibiCard v-bind="tibi" expanded @liked="onLiked" @deleted="onDeleted" @reply="startReply(tibi.id)" />
+        <PostCard v-bind="post" expanded @liked="onLiked" @deleted="onDeleted" @reply="startReply(post.id)" />
       </div>
 
-      <div v-if="replyingToId === tibi.id" ref="composeRef" class="border rounded-lg p-3 space-y-2">
+      <div v-if="replyingToId === post.id" ref="composeRef" class="border rounded-lg p-3 space-y-2">
         <Textarea
           v-model="replyContent"
-          :placeholder="t('tibi.reply.placeholder')"
+          :placeholder="t('post.reply.placeholder')"
           :maxlength="maxLength"
           class="border-none px-0 resize-none shadow-none focus-visible:ring-0 min-h-16"
           @keydown="handleKeydown"
@@ -180,7 +180,7 @@ onMounted(load)
             <Button variant="ghost" size="sm" @click="cancelReply">{{ t('common.cancel') }}</Button>
             <Button size="sm" :disabled="!replyContent.trim() || submitting" @click="submitReply">
               <Spinner v-if="submitting" data-icon="inline-start" />
-              {{ t('tibi.reply.submit') }}
+              {{ t('post.reply.submit') }}
             </Button>
           </div>
         </div>
@@ -211,7 +211,7 @@ onMounted(load)
                   <Button variant="ghost" size="sm" @click="cancelReply">{{ t('common.cancel') }}</Button>
                   <Button size="sm" :disabled="!replyContent.trim() || submitting" @click="submitReply">
                     <Spinner v-if="submitting" data-icon="inline-start" />
-                    {{ t('tibi.reply.submit') }}
+                    {{ t('post.reply.submit') }}
                   </Button>
                 </div>
               </div>

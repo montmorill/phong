@@ -1,24 +1,24 @@
 import type { AppEvent } from '../event/bus'
 import { and, count, desc, eq } from 'drizzle-orm'
-import { db, notifications, tibis, users } from 'server/db'
+import { db, notifications, posts, users } from 'server/db'
 import { bus } from '../event/bus'
 
 bus.on('event', (event: AppEvent) => {
-  if (event.topic === 'tibi.liked') {
-    const { tibiId, actorUsername, liked } = event.payload as { tibiId: number, actorUsername: string, liked: boolean }
+  if (event.topic === 'post.liked') {
+    const { postId, actorUsername, liked } = event.payload as { postId: number, actorUsername: string, liked: boolean }
     if (!liked)
       return
-    const tibi = db.select({ username: tibis.username }).from(tibis).where(eq(tibis.id, tibiId)).get()
-    if (!tibi || tibi.username === actorUsername)
+    const post = db.select({ username: posts.username }).from(posts).where(eq(posts.id, postId)).get()
+    if (!post || post.username === actorUsername)
       return
-    db.insert(notifications).values({ username: tibi.username, type: 'like', actorUsername, tibiId }).run()
+    db.insert(notifications).values({ username: post.username, type: 'like', actorUsername, postId }).run()
   }
-  else if (event.topic === 'tibi.replied') {
+  else if (event.topic === 'post.replied') {
     const { parentId, actorUsername, replyId } = event.payload as { parentId: number, actorUsername: string, replyId: number }
-    const tibi = db.select({ username: tibis.username }).from(tibis).where(eq(tibis.id, parentId)).get()
-    if (!tibi || tibi.username === actorUsername)
+    const post = db.select({ username: posts.username }).from(posts).where(eq(posts.id, parentId)).get()
+    if (!post || post.username === actorUsername)
       return
-    db.insert(notifications).values({ username: tibi.username, type: 'reply', actorUsername, tibiId: parentId, replyId }).run()
+    db.insert(notifications).values({ username: post.username, type: 'reply', actorUsername, postId: parentId, replyId }).run()
   }
 })
 
@@ -30,15 +30,15 @@ export function list(username: string) {
       actorUsername: notifications.actorUsername,
       actorNickname: users.nickname,
       actorAvatar: users.avatar,
-      tibiId: notifications.tibiId,
-      tibiContent: tibis.content,
+      postId: notifications.postId,
+      postContent: posts.content,
       replyId: notifications.replyId,
       read: notifications.read,
       createdAt: notifications.createdAt,
     })
     .from(notifications)
     .leftJoin(users, eq(notifications.actorUsername, users.username))
-    .leftJoin(tibis, eq(notifications.tibiId, tibis.id))
+    .leftJoin(posts, eq(notifications.postId, posts.id))
     .where(eq(notifications.username, username))
     .orderBy(desc(notifications.createdAt))
     .all()
@@ -49,8 +49,8 @@ export function list(username: string) {
     actorUsername: r.actorUsername,
     actorNickname: r.actorNickname ?? '',
     actorAvatar: r.actorAvatar ?? '',
-    tibiId: r.tibiId,
-    tibiContent: (r.tibiContent ?? '').slice(0, 80),
+    postId: r.postId,
+    postContent: (r.postContent ?? '').slice(0, 80),
     replyId: r.replyId ?? undefined,
     read: r.read,
     createdAt: r.createdAt!.getTime(),

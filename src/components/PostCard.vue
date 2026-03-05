@@ -59,7 +59,7 @@ async function handleLike() {
     router.push('/login')
     return
   }
-  const { data } = await api.tibi({ id: props.id }).like.post()
+  const { data } = await api.post({ id: props.id }).like.post()
   if (data) {
     emit('liked', props.id, data.liked, props.likeCount + (data.liked ? 1 : -1))
   }
@@ -67,7 +67,7 @@ async function handleLike() {
 
 async function confirmDelete() {
   deleting.value = true
-  await api.tibi({ id: props.id }).delete()
+  await api.post({ id: props.id }).delete()
   deleting.value = false
   emit('deleted', props.id)
 }
@@ -77,7 +77,7 @@ async function confirmDelete() {
   <Card>
     <CardContent class="pt-4">
       <div class="flex items-center gap-2 mb-3 select-none">
-        <RouterLink :to="`/@${username}/tibi`">
+        <RouterLink :to="`/@${username}/post`">
           <Avatar class="size-8 border">
             <AvatarImage :src="avatarUrl" :alt="username" />
             <AvatarFallback>{{ nickname.slice(0, 2) }}</AvatarFallback>
@@ -90,7 +90,7 @@ async function confirmDelete() {
           <span class="text-xs text-muted-foreground">{{ timeStr(createdAt) }}</span>
         </div>
       </div>
-      <div :class="expanded ? '' : 'cursor-pointer'" @click="router.push(`/tibi/${props.id}#reply`)">
+      <div :class="expanded ? '' : 'cursor-pointer'" @click="router.push(`/post/${props.id}#reply`)">
         <p v-if="title" class="font-semibold text-sm mb-1">{{ title }}</p>
         <div class="relative">
           <div
@@ -103,7 +103,7 @@ async function confirmDelete() {
             v-if="overflows"
             class="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-card to-transparent flex items-end"
           >
-            <span class="text-xs text-muted-foreground">{{ t('tibi.readMore') }}</span>
+            <span class="text-xs text-muted-foreground">{{ t('post.readMore') }}</span>
           </div>
         </div>
       </div>
@@ -121,7 +121,7 @@ async function confirmDelete() {
         <Button
           variant="ghost" size="sm"
           class="gap-1 text-muted-foreground h-7 px-2"
-          @click="expanded ? emit('reply') : router.push(`/tibi/${props.id}#reply`)"
+          @click="expanded ? emit('reply') : router.push(`/post/${props.id}#reply`)"
         >
           <MessageSquare class="size-4" />
           {{ replyCount }}
@@ -138,8 +138,8 @@ async function confirmDelete() {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{{ t('tibi.deleteConfirm') }}</AlertDialogTitle>
-              <AlertDialogDescription>{{ t('tibi.deleteDescription') }}</AlertDialogDescription>
+              <AlertDialogTitle>{{ t('post.deleteConfirm') }}</AlertDialogTitle>
+              <AlertDialogDescription>{{ t('post.deleteDescription') }}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>

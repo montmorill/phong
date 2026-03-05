@@ -13,10 +13,10 @@ const router = createRouter({
     { path: '/signup', component: () => import('@/views/Signup.vue'), meta: { guestOnly: true } },
     { path: '/settings', component: () => import('@/views/Profile.vue'), meta: { authRequired: true } },
     { path: '/inbox', component: () => import('@/views/Inbox.vue'), meta: { authRequired: true } },
-    { path: '/tibi', component: () => import('@/views/TibiPage.vue') },
-    { path: '/tibi/:id', component: () => import('@/views/TibiDetail.vue'), props: route => ({ id: Number(route.params.id) }) },
+    { path: '/post', component: () => import('@/views/PostPage.vue') },
+    { path: '/post/:id', component: () => import('@/views/PostDetail.vue'), props: route => ({ id: Number(route.params.id) }) },
     { path: '/@:username', component: () => import('@/views/UserPage.vue') },
-    { path: '/@:username/tibi', component: () => import('@/views/TibiPage.vue'), props: route => ({ username: route.params.username }) },
+    { path: '/@:username/post', component: () => import('@/views/PostPage.vue'), props: route => ({ username: route.params.username }) },
   ],
 })
 

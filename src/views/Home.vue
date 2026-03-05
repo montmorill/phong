@@ -11,8 +11,8 @@ const { hitokoto, fromLine } = useHitokoto()
 <template>
   <div class="space-y-4">
     <div class="text-center">
-      <RouterLink to="/tibi" class="link">
-        {{ t('nav.tibi') }}
+      <RouterLink to="/post" class="link">
+        {{ t('nav.post') }}
       </RouterLink>
     </div>
     <Separator />

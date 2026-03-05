@@ -15,8 +15,8 @@ interface NotificationItem {
   actorUsername: string
   actorNickname: string
   actorAvatar: string
-  tibiId: number
-  tibiContent: string
+  postId: number
+  postContent: string
   replyId?: number
   read: boolean
   createdAt: number
@@ -46,7 +46,7 @@ function resolveAvatarUrl(avatar: string): string {
 }
 
 function navigate(item: NotificationItem) {
-  router.push(item.type === 'reply' ? `/tibi/${item.tibiId}#reply` : `/tibi/${item.tibiId}`)
+  router.push(item.type === 'reply' ? `/post/${item.postId}#reply` : `/post/${item.postId}`)
 }
 </script>
 
@@ -83,7 +83,7 @@ function navigate(item: NotificationItem) {
             <span class="text-sm text-muted-foreground">{{ t(`inbox.${item.type}d`) }}</span>
             <span v-if="!item.read" class="size-1.5 rounded-full bg-blue-500 shrink-0" />
           </div>
-          <p class="text-xs text-muted-foreground mt-0.5 truncate">{{ item.tibiContent }}</p>
+          <p class="text-xs text-muted-foreground mt-0.5 truncate">{{ item.postContent }}</p>
           <p class="text-xs text-muted-foreground mt-0.5">{{ timeStr(item.createdAt) }}</p>
         </div>
       </div>

@@ -41,7 +41,7 @@ export default new Elysia()
       start(controller) {
         controller.enqueue(encoder.encode(': keepalive\n\n'))
         handler = (event: AppEvent) => {
-          if (event.topic.startsWith('tibi.')) {
+          if (event.topic.startsWith('post.')) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ topic: event.topic, payload: event.payload })}\n\n`))
           }
         }

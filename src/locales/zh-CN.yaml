@@ -11,7 +11,7 @@ nav:
   inbox: 收件箱
   settings: 资料设置
   logout: 退出登录
-  tibi: 题壁
+  post: 题壁
 login:
   title: 登录
   submit: 登录
@@ -59,7 +59,7 @@ field:
     label: 确认密码
     placeholder: 再次输入密码
     mismatch: 两次输入的密码不一致
-  tibi:
+  post:
     title:
       label: 标题
       placeholder: 标题（可选）
@@ -69,7 +69,7 @@ common:
   cancel: 取消
   delete: 删除
   back: 返回
-tibi:
+post:
   title: 题壁
   empty: 暂无题壁，成为第一个留壁的人吧
   loginRequired: '{login}后才能题壁'

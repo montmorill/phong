@@ -37,8 +37,8 @@ onMounted(async () => {
       <p class="text-sm text-muted-foreground">@{{ profile.username }}</p>
     </div>
     <div class="text-center">
-      <RouterLink :to="`/@${profile.username}/tibi`" class="link">
-        {{ t('nav.tibi') }}
+      <RouterLink :to="`/@${profile.username}/post`" class="link">
+        {{ t('nav.post') }}
       </RouterLink>
     </div>
   </div>

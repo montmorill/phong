@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createTibiBody } from '@server/tibi/model'
+import { createPostBody } from '@server/post/model'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
@@ -21,16 +21,16 @@ const content = ref('')
 const submitting = ref(false)
 const serverError = ref('')
 
-const titleMaxLength = createTibiBody.properties.title.maxLength!
-const titleSchema = createTibiBody.properties.title
-const maxLength = createTibiBody.properties.content.maxLength!
-const contentSchema = createTibiBody.properties.content
+const titleMaxLength = createPostBody.properties.title.maxLength!
+const titleSchema = createPostBody.properties.title
+const maxLength = createPostBody.properties.content.maxLength!
+const contentSchema = createPostBody.properties.content
 
 const titleError = computed(() =>
-  title.value ? validateField(composer, titleSchema, title.value, 'tibi.title') : undefined,
+  title.value ? validateField(composer, titleSchema, title.value, 'post.title') : undefined,
 )
 const contentError = computed(() =>
-  content.value ? validateField(composer, contentSchema, content.value, 'tibi.content') : undefined,
+  content.value ? validateField(composer, contentSchema, content.value, 'post.content') : undefined,
 )
 
 async function submit() {
@@ -38,13 +38,13 @@ async function submit() {
     return
   submitting.value = true
   serverError.value = ''
-  const { error } = await api.tibi.post({
+  const { error } = await api.post.post({
     title: title.value.trim() || undefined,
     content: content.value.trim(),
   })
   submitting.value = false
   if (error) {
-    serverError.value = t('tibi.errors.postFailed')
+    serverError.value = t('post.errors.postFailed')
     return
   }
   title.value = ''
@@ -58,14 +58,14 @@ async function submit() {
     <CardContent class="pt-4 pb-3 space-y-3">
       <Input
         v-model="title"
-        :placeholder="t('field.tibi.title.placeholder')"
+        :placeholder="t('field.post.title.placeholder')"
         :maxlength="titleMaxLength"
         class="border-none px-0 shadow-none focus-visible:ring-0 font-medium"
       />
       <Separator />
       <Textarea
         v-model="content"
-        :placeholder="t('tibi.compose.placeholder')"
+        :placeholder="t('post.compose.placeholder')"
         :maxlength="maxLength"
         class="border-none px-0 resize-none shadow-none focus-visible:ring-0 min-h-18"
       />
@@ -83,7 +83,7 @@ async function submit() {
         @click="submit"
       >
         <Spinner v-if="submitting" data-icon="inline-start" />
-        {{ t('tibi.compose.submit') }}
+        {{ t('post.compose.submit') }}
       </Button>
     </CardFooter>
     <p v-if="serverError" class="px-6 pb-4 text-sm text-destructive">

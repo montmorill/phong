@@ -1,39 +1,39 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Translation, useI18n } from 'vue-i18n'
-import TibiCard from '@/components/TibiCard.vue'
-import TibiCompose from '@/components/TibiCompose.vue'
+import PostCard from '@/components/PostCard.vue'
+import PostCompose from '@/components/PostCompose.vue'
 import { api, user } from '@/lib/api'
 
 const props = defineProps<{ username?: string }>()
 
-type TibiItem = NonNullable<Awaited<ReturnType<typeof api.tibi.get>>['data']>[number]
+type PostItem = NonNullable<Awaited<ReturnType<typeof api.post.get>>['data']>[number]
 
 const { t } = useI18n()
 
-const tibis = ref<TibiItem[]>([])
+const posts = ref<PostItem[]>([])
 const loading = ref(false)
 
 const canCompose = () => !props.username || props.username === user.value?.username
 
-async function loadTibis() {
+async function loadPosts() {
   loading.value = true
-  const { data } = await api.tibi.get({ query: { username: props.username } })
+  const { data } = await api.post.get({ query: { username: props.username } })
   if (data)
-    tibis.value = data
+    posts.value = data
   loading.value = false
 }
 
 function onPosted() {
-  loadTibis()
+  loadPosts()
 }
 
 function onDeleted(id: number) {
-  tibis.value = tibis.value.filter(item => item.id !== id)
+  posts.value = posts.value.filter(item => item.id !== id)
 }
 
 function onLiked(id: number, liked: boolean, likeCount: number) {
-  const item = tibis.value.find(item => item.id === id)
+  const item = posts.value.find(item => item.id === id)
   if (item) {
     item.liked = liked
     item.likeCount = likeCount
@@ -43,13 +43,13 @@ function onLiked(id: number, liked: boolean, likeCount: number) {
 let sse: EventSource | null = null
 
 onMounted(() => {
-  loadTibis()
+  loadPosts()
   sse = new EventSource(`${window.location.origin}/api/sse`)
   sse.onmessage = (e) => {
     const { topic, payload } = JSON.parse(e.data) as { topic: string, payload: { username?: string } }
-    if (topic === 'tibi.created') {
+    if (topic === 'post.created') {
       if (!props.username || props.username === payload.username)
-        loadTibis()
+        loadPosts()
     }
   }
 })
@@ -67,24 +67,24 @@ onUnmounted(() => {
         @{{ username }}
       </RouterLink>
       <span class="text-muted-foreground">/</span>
-      <span class="font-medium">{{ t('tibi.title') }}</span>
+      <span class="font-medium">{{ t('post.title') }}</span>
     </div>
 
-    <TibiCompose v-if="canCompose() && user" @posted="onPosted" />
-    <Translation v-else-if="!user && !username" keypath="tibi.loginRequired" class="text-center text-muted-foreground text-sm">
+    <PostCompose v-if="canCompose() && user" @posted="onPosted" />
+    <Translation v-else-if="!user && !username" keypath="post.loginRequired" class="text-center text-muted-foreground text-sm">
       <template #login>
         <RouterLink to="/login" class="link">
           {{ t('home.loginLink') }}
         </RouterLink>
       </template>
     </Translation>
-    <div v-if="tibis.length === 0 && !loading" class="text-center text-muted-foreground py-8">
-      {{ t('tibi.empty') }}
+    <div v-if="posts.length === 0 && !loading" class="text-center text-muted-foreground py-8">
+      {{ t('post.empty') }}
     </div>
-    <TibiCard
-      v-for="tibi in tibis"
-      :key="tibi.id"
-      v-bind="tibi"
+    <PostCard
+      v-for="post in posts"
+      :key="post.id"
+      v-bind="post"
       @deleted="onDeleted"
       @liked="onLiked"
     />

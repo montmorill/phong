@@ -15,7 +15,7 @@ export const userCapabilities = sqliteTable('user_capabilities', {
   primaryKey({ columns: [table.username, table.capability] }),
 ])
 
-export const tibis = sqliteTable('tibis', {
+export const posts = sqliteTable('tibis', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   parentId: integer('parent_id'),
   title: text('title'),
@@ -24,11 +24,11 @@ export const tibis = sqliteTable('tibis', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 })
 
-export const tibiLikes = sqliteTable('tibi_likes', {
-  tibiId: integer('tibi_id').notNull().references(() => tibis.id),
+export const postLikes = sqliteTable('tibi_likes', {
+  postId: integer('tibi_id').notNull().references(() => posts.id),
   username: text('username').notNull().references(() => users.username),
 }, table => [
-  primaryKey({ columns: [table.tibiId, table.username] }),
+  primaryKey({ columns: [table.postId, table.username] }),
 ])
 
 export const notifications = sqliteTable('notifications', {
@@ -36,7 +36,7 @@ export const notifications = sqliteTable('notifications', {
   username: text('username').notNull().references(() => users.username),
   type: text('type').notNull(), // 'like' | 'reply'
   actorUsername: text('actor_username').notNull().references(() => users.username),
-  tibiId: integer('tibi_id').notNull(),
+  postId: integer('tibi_id').notNull(),
   replyId: integer('reply_id'),
   read: integer('read', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),

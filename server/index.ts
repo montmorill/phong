@@ -5,7 +5,7 @@ const app = new Elysia({ prefix: '/api' })
   .use(cors())
   .use(import('@server/auth'))
   .use(import('@server/event'))
-  .use(import('@server/tibi'))
+  .use(import('@server/post'))
   .use(import('@server/notification'))
   .listen(3000)
 

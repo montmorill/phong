@@ -2,8 +2,8 @@ import { jwt } from '@elysiajs/jwt'
 import { Type as t } from '@sinclair/typebox'
 import { Elysia } from 'elysia'
 import { bus } from '../event/bus'
-import { createTibiBody, replyBody } from './model'
-import * as TibiService from './service'
+import { createPostBody, replyBody } from './model'
+import * as PostService from './service'
 
 export default new Elysia()
   .use(jwt({
@@ -11,7 +11,7 @@ export default new Elysia()
     secret: Bun.env.JWT_SECRET ?? 'dev-secret-please-change-in-production',
     exp: '7d',
   }))
-  .get('/tibi', async ({ headers, jwt, query }) => {
+  .get('/post', async ({ headers, jwt, query }) => {
     const authorization = headers.authorization ?? ''
     let viewerUsername: string | undefined
     if (authorization.startsWith('Bearer ')) {
@@ -19,54 +19,54 @@ export default new Elysia()
       if (payload && typeof payload.sub === 'string')
         viewerUsername = payload.sub
     }
-    return TibiService.list(viewerUsername, query.username)
+    return PostService.list(viewerUsername, query.username)
   }, {
     query: t.Object({ username: t.Optional(t.String()) }),
   })
-  .post('/tibi', async ({ headers, jwt, body, status }) => {
+  .post('/post', async ({ headers, jwt, body, status }) => {
     const authorization = headers.authorization ?? ''
     if (!authorization.startsWith('Bearer '))
       return status(401, { message: 'error.unauthorized' })
     const payload = await jwt.verify(authorization.slice(7))
     if (!payload || typeof payload.sub !== 'string')
       return status(401, { message: 'error.tokenExpired' })
-    TibiService.create(payload.sub, body.content, body.title)
-    bus.publish('tibi.created', { username: payload.sub })
+    PostService.create(payload.sub, body.content, body.title)
+    bus.publish('post.created', { username: payload.sub })
     return status(201, {})
   }, {
-    body: createTibiBody,
+    body: createPostBody,
     error({ error, status }) {
       return status(400, { message: 'error.badRequest', detail: error })
     },
   })
-  .delete('/tibi/:id', async ({ headers, jwt, params, status }) => {
+  .delete('/post/:id', async ({ headers, jwt, params, status }) => {
     const authorization = headers.authorization ?? ''
     if (!authorization.startsWith('Bearer '))
       return status(401, { message: 'error.unauthorized' })
     const payload = await jwt.verify(authorization.slice(7))
     if (!payload || typeof payload.sub !== 'string')
       return status(401, { message: 'error.tokenExpired' })
-    const result = TibiService.remove(Number(params.id), payload.sub)
+    const result = PostService.remove(Number(params.id), payload.sub)
     if (result === 'not_found')
-      return status(404, { message: 'error.tibiNotFound' })
+      return status(404, { message: 'error.postNotFound' })
     if (result === 'forbidden')
       return status(403, { message: 'error.forbidden' })
     return {}
   })
-  .post('/tibi/:id/like', async ({ headers, jwt, params, status }) => {
+  .post('/post/:id/like', async ({ headers, jwt, params, status }) => {
     const authorization = headers.authorization ?? ''
     if (!authorization.startsWith('Bearer '))
       return status(401, { message: 'error.unauthorized' })
     const payload = await jwt.verify(authorization.slice(7))
     if (!payload || typeof payload.sub !== 'string')
       return status(401, { message: 'error.tokenExpired' })
-    const result = TibiService.toggleLike(Number(params.id), payload.sub)
+    const result = PostService.toggleLike(Number(params.id), payload.sub)
     if (result === null)
-      return status(404, { message: 'error.tibiNotFound' })
-    bus.publish('tibi.liked', { tibiId: Number(params.id), actorUsername: payload.sub, liked: result })
+      return status(404, { message: 'error.postNotFound' })
+    bus.publish('post.liked', { postId: Number(params.id), actorUsername: payload.sub, liked: result })
     return { liked: result }
   })
-  .get('/tibi/:id', async ({ headers, jwt, params, status }) => {
+  .get('/post/:id', async ({ headers, jwt, params, status }) => {
     const authorization = headers.authorization ?? ''
     let viewerUsername: string | undefined
     if (authorization.startsWith('Bearer ')) {
@@ -74,12 +74,12 @@ export default new Elysia()
       if (payload && typeof payload.sub === 'string')
         viewerUsername = payload.sub
     }
-    const tibi = TibiService.get(Number(params.id), viewerUsername)
-    if (!tibi)
-      return status(404, { message: 'error.tibiNotFound' })
-    return tibi
+    const post = PostService.get(Number(params.id), viewerUsername)
+    if (!post)
+      return status(404, { message: 'error.postNotFound' })
+    return post
   })
-  .get('/tibi/:id/thread', async ({ headers, jwt, params }) => {
+  .get('/post/:id/thread', async ({ headers, jwt, params }) => {
     const authorization = headers.authorization ?? ''
     let viewerUsername: string | undefined
     if (authorization.startsWith('Bearer ')) {
@@ -87,20 +87,20 @@ export default new Elysia()
       if (payload && typeof payload.sub === 'string')
         viewerUsername = payload.sub
     }
-    return TibiService.listThread(Number(params.id), viewerUsername)
+    return PostService.listThread(Number(params.id), viewerUsername)
   })
-  .post('/tibi/:id/reply', async ({ headers, jwt, params, body, status }) => {
+  .post('/post/:id/reply', async ({ headers, jwt, params, body, status }) => {
     const authorization = headers.authorization ?? ''
     if (!authorization.startsWith('Bearer '))
       return status(401, { message: 'error.unauthorized' })
     const payload = await jwt.verify(authorization.slice(7))
     if (!payload || typeof payload.sub !== 'string')
       return status(401, { message: 'error.tokenExpired' })
-    const parentExists = TibiService.get(Number(params.id))
+    const parentExists = PostService.get(Number(params.id))
     if (!parentExists)
-      return status(404, { message: 'error.tibiNotFound' })
-    const replyId = TibiService.create(payload.sub, body.content, undefined, Number(params.id))
-    bus.publish('tibi.replied', { parentId: Number(params.id), actorUsername: payload.sub, replyId })
+      return status(404, { message: 'error.postNotFound' })
+    const replyId = PostService.create(payload.sub, body.content, undefined, Number(params.id))
+    bus.publish('post.replied', { parentId: Number(params.id), actorUsername: payload.sub, replyId })
     return status(201, {})
   }, {
     body: replyBody,

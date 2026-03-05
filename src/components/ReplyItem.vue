@@ -62,7 +62,7 @@ async function handleLike() {
     router.push('/login')
     return
   }
-  const { data } = await api.tibi({ id: props.id }).like.post()
+  const { data } = await api.post({ id: props.id }).like.post()
   if (data) {
     localLikeCount.value += data.liked ? 1 : -1
     localLiked.value = data.liked
@@ -71,7 +71,7 @@ async function handleLike() {
 
 async function confirmDelete() {
   deleting.value = true
-  await api.tibi({ id: props.id }).delete()
+  await api.post({ id: props.id }).delete()
   deleting.value = false
   emit('deleted', props.id)
 }
@@ -98,7 +98,7 @@ async function confirmDelete() {
         class="text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors block"
         @click.prevent="jumpToParent"
       >
-        {{ t('tibi.replyTo', {
+        {{ t('post.replyTo', {
           nickname: parentNickname,
           content: parentContent,
         }) }}
@@ -122,7 +122,7 @@ async function confirmDelete() {
           @click="emit('reply', id)"
         >
           <MessageSquare class="size-3" />
-          {{ t('tibi.reply.submit') }}
+          {{ t('post.reply.submit') }}
         </Button>
         <AlertDialog v-if="isOwn">
           <AlertDialogTrigger as-child>
@@ -136,8 +136,8 @@ async function confirmDelete() {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{{ t('tibi.deleteConfirm') }}</AlertDialogTitle>
-              <AlertDialogDescription>{{ t('tibi.deleteDescription') }}</AlertDialogDescription>
+              <AlertDialogTitle>{{ t('post.deleteConfirm') }}</AlertDialogTitle>
+              <AlertDialogDescription>{{ t('post.deleteDescription') }}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
