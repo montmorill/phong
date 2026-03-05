@@ -3,9 +3,9 @@ import { Heart, MessageSquare } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import useTimeStr from '@/composables/useTimeStr'
 import { api, user } from '@/lib/api'
@@ -98,7 +98,7 @@ async function confirmDelete() {
             v-if="overflows"
             class="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-card to-transparent flex items-end"
           >
-            <span class="text-xs text-muted-foreground">{{ t('post.readMore') }}</span>
+            <span class="text-xs text-muted-foreground translate-y-4">{{ t('post.readMore') }}</span>
           </div>
         </div>
       </div>

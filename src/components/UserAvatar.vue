@@ -13,7 +13,7 @@ const { avatarUrl } = useAvatar(() => props.avatar)
 </script>
 
 <template>
-  <Avatar :class="[size ?? 'size-8', 'border']">
+  <Avatar class="border" :class="[size ?? 'size-8']">
     <AvatarImage :src="avatarUrl" :alt="username" />
     <AvatarFallback>{{ nickname.slice(0, 2) }}</AvatarFallback>
   </Avatar>

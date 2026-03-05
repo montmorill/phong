@@ -80,7 +80,7 @@ function navigate(item: NotificationItem) {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-sm font-medium">{{ item.actorNickname }}</span>
-            <span class="text-sm text-muted-foreground">{{ t(`inbox.${item.type}d`) }}</span>
+            <span class="text-sm text-muted-foreground">{{ t(`inbox.${item.type}`) }}</span>
             <span v-if="!item.read" class="size-1.5 rounded-full bg-blue-500 shrink-0" />
           </div>
           <p class="text-xs text-muted-foreground mt-0.5 truncate">{{ item.postContent }}</p>

@@ -94,8 +94,8 @@ time:
 inbox:
   title: 收件箱
   empty: 暂无通知
-  liked: 赞了你的题壁
-  replied: 回复了你的题壁
+  like: 赞了你的题壁
+  reply: 回复了你的题壁
 userPage:
   notFound: 用户不存在
 error:

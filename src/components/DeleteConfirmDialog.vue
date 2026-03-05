@@ -19,7 +19,7 @@ const { t } = useI18n()
       <Button
         variant="ghost"
         size="sm"
-        :class="['text-muted-foreground hover:text-destructive', buttonClass]"
+        class="text-muted-foreground hover:text-destructive" :class="[buttonClass]"
       >
         <Trash2 />
       </Button>
