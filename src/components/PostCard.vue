@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { Heart, MessageSquare, Trash2 } from 'lucide-vue-next'
+import { Heart, MessageSquare } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import useAvatar from '@/composables/avatar'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import useTimeStr from '@/composables/useTimeStr'
 import { api, user } from '@/lib/api'
 
@@ -32,7 +31,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const router = useRouter()
-const { avatarUrl } = useAvatar(() => props.avatar)
 const timeStr = useTimeStr()
 
 const renderedContent = computed(() =>
@@ -78,10 +76,7 @@ async function confirmDelete() {
     <CardContent class="pt-4">
       <div class="flex items-center gap-2 mb-3 select-none">
         <RouterLink :to="`/@${username}/post`">
-          <Avatar class="size-8 border">
-            <AvatarImage :src="avatarUrl" :alt="username" />
-            <AvatarFallback>{{ nickname.slice(0, 2) }}</AvatarFallback>
-          </Avatar>
+          <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" />
         </RouterLink>
         <div class="flex flex-col leading-none gap-0.5">
           <RouterLink :to="`/@${username}`" class="text-sm font-medium hover:underline">
@@ -90,7 +85,7 @@ async function confirmDelete() {
           <span class="text-xs text-muted-foreground">{{ timeStr(createdAt) }}</span>
         </div>
       </div>
-      <div :class="expanded ? '' : 'cursor-pointer'" @click="router.push(`/post/${props.id}#reply`)">
+      <div :class="expanded ? '' : 'cursor-pointer'" @click="router.push(`/post/${props.id}`)">
         <p v-if="title" class="font-semibold text-sm mb-1">{{ title }}</p>
         <div class="relative">
           <div
@@ -111,7 +106,7 @@ async function confirmDelete() {
         <Button
           variant="ghost"
           size="sm"
-          class="gap-1 text-muted-foreground h-7 px-2"
+          class="gap-1 text-muted-foreground h-7 px-2 leading-none"
           :class="{ 'text-red-500': liked }"
           @click="handleLike"
         >
@@ -120,39 +115,18 @@ async function confirmDelete() {
         </Button>
         <Button
           variant="ghost" size="sm"
-          class="gap-1 text-muted-foreground h-7 px-2"
+          class="gap-1 text-muted-foreground h-7 px-2 leading-none"
           @click="expanded ? emit('reply') : router.push(`/post/${props.id}#reply`)"
         >
           <MessageSquare class="size-4" />
           {{ replyCount }}
         </Button>
-        <AlertDialog v-if="isOwn">
-          <AlertDialogTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="text-muted-foreground hover:text-destructive h-7 px-2"
-            >
-              <Trash2 class="size-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{{ t('post.deleteConfirm') }}</AlertDialogTitle>
-              <AlertDialogDescription>{{ t('post.deleteDescription') }}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
-              <AlertDialogAction
-                class="bg-destructive text-white hover:bg-destructive/90"
-                :disabled="deleting"
-                @click.prevent="confirmDelete"
-              >
-                {{ t('common.delete') }}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirmDialog
+          v-if="isOwn"
+          :deleting="deleting"
+          button-class="h-7 px-2 leading-none"
+          @confirm="confirmDelete"
+        />
       </div>
     </CardContent>
   </Card>

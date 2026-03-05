@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { Heart, MessageSquare, Trash2 } from 'lucide-vue-next'
+import { Heart, MessageSquare } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import useAvatar from '@/composables/avatar'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import useTimeStr from '@/composables/useTimeStr'
 import { api, user } from '@/lib/api'
 
@@ -32,7 +31,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const router = useRouter()
-const { avatarUrl } = useAvatar(() => props.avatar)
 const timeStr = useTimeStr()
 
 const localLiked = ref(props.liked)
@@ -80,10 +78,7 @@ async function confirmDelete() {
 <template>
   <div :id="`thread-item-${id}`" class="flex gap-3 py-3">
     <RouterLink :to="`/@${username}`" class="shrink-0">
-      <Avatar class="size-7 border">
-        <AvatarImage :src="avatarUrl" :alt="username" />
-        <AvatarFallback>{{ nickname.slice(0, 2) }}</AvatarFallback>
-      </Avatar>
+      <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" size="size-7" />
     </RouterLink>
     <div class="flex-1 min-w-0">
       <div class="flex items-baseline gap-2 mb-0.5">
@@ -108,7 +103,7 @@ async function confirmDelete() {
         <Button
           variant="ghost"
           size="sm"
-          class="gap-1 text-muted-foreground h-6 px-2 text-xs"
+          class="gap-1 text-muted-foreground h-6 px-2 text-xs leading-none [&_svg]:size-3"
           :class="{ 'text-red-500': localLiked }"
           @click="handleLike"
         >
@@ -118,39 +113,18 @@ async function confirmDelete() {
         <Button
           variant="ghost"
           size="sm"
-          class="gap-1 text-muted-foreground h-6 px-2 text-xs"
+          class="gap-1 text-muted-foreground h-6 px-2 text-xs leading-none [&_svg]:size-3"
           @click="emit('reply', id)"
         >
           <MessageSquare class="size-3" />
           {{ t('post.reply.submit') }}
         </Button>
-        <AlertDialog v-if="isOwn">
-          <AlertDialogTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="text-muted-foreground hover:text-destructive h-6 px-2"
-            >
-              <Trash2 class="size-3" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{{ t('post.deleteConfirm') }}</AlertDialogTitle>
-              <AlertDialogDescription>{{ t('post.deleteDescription') }}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
-              <AlertDialogAction
-                class="bg-destructive text-white hover:bg-destructive/90"
-                :disabled="deleting"
-                @click.prevent="confirmDelete"
-              >
-                {{ t('common.delete') }}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirmDialog
+          v-if="isOwn"
+          :deleting="deleting"
+          button-class="h-6 px-2 leading-none [&_svg]:size-3"
+          @confirm="confirmDelete"
+        />
       </div>
     </div>
   </div>

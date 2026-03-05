@@ -2,9 +2,8 @@
 import { Inbox, LogOut, Settings, User } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import useAvatar from '@/composables/avatar'
+import UserAvatar from '@/components/UserAvatar.vue'
 import { clearAuth, unreadCount } from '@/lib/api'
 
 const props = defineProps<{
@@ -16,8 +15,6 @@ const props = defineProps<{
 const { t } = useI18n()
 const router = useRouter()
 
-const { avatarUrl } = useAvatar(() => props.avatar)
-
 function logout() {
   clearAuth()
   router.push('/login')
@@ -28,10 +25,7 @@ function logout() {
   <DropdownMenu>
     <DropdownMenuTrigger class="flex items-center gap-2">
       <span class="text-sm">{{ nickname }}</span>
-      <Avatar class="size-9 cursor-pointer border">
-        <AvatarImage :src="avatarUrl" :alt="username" />
-        <AvatarFallback>{{ nickname.slice(0, 2) }}</AvatarFallback>
-      </Avatar>
+      <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" size="size-9" class="cursor-pointer" />
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="w-40">
       <DropdownMenuItem as-child>

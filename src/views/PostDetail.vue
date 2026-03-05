@@ -5,10 +5,10 @@ import { nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PostCard from '@/components/PostCard.vue'
-import ReplyItem from '@/components/ReplyItem.vue'
+import PostReply from '@/components/PostReply.vue'
+import ReplyCompose from '@/components/ReplyCompose.vue'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { Textarea } from '@/components/ui/textarea'
 import { api, user } from '@/lib/api'
 
 interface PostItem {
@@ -58,7 +58,7 @@ const submitting = ref(false)
 const serverError = ref('')
 const maxLength = replyBody.properties.content.maxLength!
 
-const composeRef = ref<HTMLElement | null>(null)
+const composeRef = ref<InstanceType<typeof ReplyCompose> | null>(null)
 
 async function load() {
   loading.value = true
@@ -96,7 +96,7 @@ async function startReply(targetId: number) {
   }
   replyingToId.value = targetId
   await nextTick()
-  composeRef.value?.querySelector('textarea')?.focus()
+  composeRef.value?.focus()
 }
 
 function cancelReply() {
@@ -119,15 +119,6 @@ async function submitReply() {
   replyContent.value = ''
   replyingToId.value = null
   await loadThread()
-}
-
-function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    submitReply()
-  }
-  if (e.key === 'Escape')
-    cancelReply()
 }
 
 function onLiked(_id: number, liked: boolean, likeCount: number) {
@@ -164,59 +155,38 @@ onMounted(load)
         <PostCard v-bind="post" expanded @liked="onLiked" @deleted="onDeleted" @reply="startReply(post.id)" />
       </div>
 
-      <div v-if="replyingToId === post.id" ref="composeRef" class="border rounded-lg p-3 space-y-2">
-        <Textarea
-          v-model="replyContent"
-          :placeholder="t('post.reply.placeholder')"
-          :maxlength="maxLength"
-          class="border-none px-0 resize-none shadow-none focus-visible:ring-0 min-h-16"
-          @keydown="handleKeydown"
-        />
-        <div class="flex justify-between items-center">
-          <span class="text-xs text-muted-foreground" :class="{ 'text-destructive': replyContent.length >= maxLength }">
-            {{ replyContent.length }}/{{ maxLength }}
-          </span>
-          <div class="flex gap-2">
-            <Button variant="ghost" size="sm" @click="cancelReply">{{ t('common.cancel') }}</Button>
-            <Button size="sm" :disabled="!replyContent.trim() || submitting" @click="submitReply">
-              <Spinner v-if="submitting" data-icon="inline-start" />
-              {{ t('post.reply.submit') }}
-            </Button>
-          </div>
-        </div>
-        <p v-if="serverError" class="text-sm text-destructive">{{ serverError }}</p>
-      </div>
+      <ReplyCompose
+        v-if="replyingToId === post.id"
+        ref="composeRef"
+        v-model="replyContent"
+        :max-length="maxLength"
+        :submitting="submitting"
+        :server-error="serverError"
+        :placeholder="t('post.reply.placeholder')"
+        @submit="submitReply"
+        @cancel="cancelReply"
+      />
 
       <div v-if="thread.length">
         <template v-for="item in thread" :key="item.id">
           <div>
-            <ReplyItem
+            <PostReply
               v-bind="item"
               @reply="startReply(item.id)"
               @deleted="onReplyDeleted"
             />
-            <div v-if="replyingToId === item.id" ref="composeRef" class="border rounded-lg p-3 space-y-2 mb-2 ml-10">
-              <p class="text-xs text-muted-foreground">@{{ item.nickname }}</p>
-              <Textarea
-                v-model="replyContent"
-                :maxlength="maxLength"
-                class="border-none px-0 resize-none shadow-none focus-visible:ring-0 min-h-16"
-                @keydown="handleKeydown"
-              />
-              <div class="flex justify-between items-center">
-                <span class="text-xs text-muted-foreground" :class="{ 'text-destructive': replyContent.length >= maxLength }">
-                  {{ replyContent.length }}/{{ maxLength }}
-                </span>
-                <div class="flex gap-2">
-                  <Button variant="ghost" size="sm" @click="cancelReply">{{ t('common.cancel') }}</Button>
-                  <Button size="sm" :disabled="!replyContent.trim() || submitting" @click="submitReply">
-                    <Spinner v-if="submitting" data-icon="inline-start" />
-                    {{ t('post.reply.submit') }}
-                  </Button>
-                </div>
-              </div>
-              <p v-if="serverError" class="text-sm text-destructive">{{ serverError }}</p>
-            </div>
+            <ReplyCompose
+              v-if="replyingToId === item.id"
+              ref="composeRef"
+              v-model="replyContent"
+              :max-length="maxLength"
+              :submitting="submitting"
+              :server-error="serverError"
+              :reply-to="item.nickname"
+              class="mb-2 ml-10"
+              @submit="submitReply"
+              @cancel="cancelReply"
+            />
           </div>
         </template>
       </div>
