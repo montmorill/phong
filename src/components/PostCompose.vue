@@ -55,7 +55,7 @@ async function submit() {
 
 <template>
   <Card>
-    <CardContent class="pt-4 pb-3 space-y-3">
+    <CardContent class="px-4 pt-4 pb-3 space-y-3">
       <Input
         v-model="title"
         :placeholder="t('field.post.title.placeholder')"
@@ -70,7 +70,7 @@ async function submit() {
         class="border-none px-0 resize-none shadow-none focus-visible:ring-0 min-h-18"
       />
     </CardContent>
-    <CardFooter class="pt-3 flex justify-between items-center">
+    <CardFooter class="px-4 pt-3 pb-4 justify-between">
       <span
         class="text-xs text-muted-foreground select-none"
         :class="{ 'text-destructive': contentError }"
@@ -86,7 +86,7 @@ async function submit() {
         {{ t('post.compose.submit') }}
       </Button>
     </CardFooter>
-    <p v-if="serverError" class="px-6 pb-4 text-sm text-destructive">
+    <p v-if="serverError" class="px-4 pb-3 text-sm text-destructive">
       {{ serverError }}
     </p>
   </Card>

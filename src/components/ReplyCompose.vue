@@ -40,7 +40,7 @@ defineExpose({ focus })
 </script>
 
 <template>
-  <div class="border rounded-lg p-3 space-y-2">
+  <div class="border rounded-lg px-3 pt-2 pb-3 space-y-2">
     <p v-if="replyTo" class="text-xs text-muted-foreground">
       @{{ replyTo }}
     </p>

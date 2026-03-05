@@ -1,10 +1,11 @@
 brand:
   name: 平渹网
 home:
+  joinGroup: 点击链接加入群聊{group}
   notLoggedIn: 您还没有登录，请{login}或{signup}
   loginLink: 登录
   signupLink: 注册
-  joinGroup: 点击链接加入群聊{group}
+  welcome: '{nickname}，欢迎回到平渹网。'
   joinGroupName: 【平渹网工作小组】
 nav:
   profile: 个人主页

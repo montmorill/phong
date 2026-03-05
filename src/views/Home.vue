@@ -9,8 +9,11 @@ const { hitokoto, fromLine } = useHitokoto()
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="text-center">
+  <div class="space-y-4 text-center my-auto">
+    <div v-if="user">
+      {{ t('home.welcome', user) }}
+    </div>
+    <div>
       <RouterLink to="/post" class="link">
         {{ t('nav.post') }}
       </RouterLink>

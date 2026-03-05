@@ -10,7 +10,7 @@ import { user } from '@/lib/api'
       <NavBrand />
       <NavUser v-if="user" v-bind="user" />
     </header>
-    <main class="grow flex flex-col justify-center items-center">
+    <main class="h-[calc(100vh-4em)] overflow-y-scroll flex flex-col items-center">
       <RouterView />
     </main>
   </div>

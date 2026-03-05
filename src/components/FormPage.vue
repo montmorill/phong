@@ -30,7 +30,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="w-full max-w-sm px-4">
+  <div class="w-full max-w-sm px-4 my-auto">
     <h1 class="text-3xl font-bold text-center mb-6">
       {{ title }}
     </h1>

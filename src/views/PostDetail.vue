@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import type * as PostService from 'server/modules/posts/service'
 import { ChevronLeft } from 'lucide-vue-next'
 import { replyBody } from 'server/modules/posts/model'
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PostCard from '@/components/PostCard.vue'
@@ -11,35 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { api, user } from '@/lib/api'
 
-interface PostItem {
-  id: number
-  parentId?: number
-  title?: string
-  content: string
-  username: string
-  nickname: string
-  avatar: string
-  createdAt: number
-  likeCount: number
-  replyCount: number
-  liked: boolean
-  rootId: number
-}
-
-interface ThreadItem {
-  id: number
-  parentId: number
-  content: string
-  username: string
-  nickname: string
-  avatar: string
-  createdAt: number
-  likeCount: number
-  liked: boolean
-  parentUsername?: string
-  parentNickname?: string
-  parentContent?: string
-}
+type PostItem = NonNullable<ReturnType<typeof PostService.get>>
+type ThreadItem = ReturnType<typeof PostService.listThread>[number]
 
 const props = defineProps<{ id: number }>()
 
@@ -59,6 +33,15 @@ const serverError = ref('')
 const maxLength = replyBody.properties.content.maxLength!
 
 const composeRef = ref<InstanceType<typeof ReplyCompose> | null>(null)
+const threadRootRef = ref<HTMLElement | null>(null)
+
+const threadElMap = new Map<number, HTMLElement>()
+provide('threadElMap', threadElMap)
+
+watch(threadRootRef, (el) => {
+  if (el)
+    threadElMap.set(0, el)
+})
 
 async function load() {
   loading.value = true
@@ -151,7 +134,7 @@ onMounted(load)
       {{ t('post.notFound') }}
     </div>
     <template v-else-if="post">
-      <div id="thread-root">
+      <div ref="threadRootRef">
         <PostCard v-bind="post" expanded @liked="onLiked" @deleted="onDeleted" @reply="startReply(post.id)" />
       </div>
 

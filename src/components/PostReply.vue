@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Heart, MessageSquare } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, inject, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
@@ -40,15 +40,24 @@ const deleting = ref(false)
 const isOwn = computed(() => user.value?.username === props.username)
 const renderedContent = computed(() => props.content.trim().replace(/\n/g, '<br>'))
 
+const selfEl = ref<HTMLElement | null>(null)
+const threadElMap = inject<Map<number, HTMLElement>>('threadElMap')
+
+onMounted(() => {
+  if (selfEl.value)
+    threadElMap?.set(props.id, selfEl.value)
+})
+onUnmounted(() => {
+  threadElMap?.delete(props.id)
+})
+
 function jumpToParent() {
   if (!props.parentId)
     return
-  const targetId = `thread-item-${props.parentId}`
-  const el = document.getElementById(targetId) ?? document.getElementById('thread-root')
+  const el = threadElMap?.get(props.parentId) ?? threadElMap?.get(0)
   if (!el)
     return
   el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  history.pushState(null, '', `#${el.id}`)
   el.classList.remove('thread-highlight')
   void el.offsetWidth // reflow to restart animation
   el.classList.add('thread-highlight')
@@ -76,7 +85,7 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <div :id="`thread-item-${id}`" class="flex gap-3 py-3">
+  <div ref="selfEl" class="flex gap-3 py-3">
     <RouterLink :to="`/@${username}`" class="shrink-0">
       <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" size="size-7" />
     </RouterLink>
@@ -87,17 +96,16 @@ async function confirmDelete() {
         </RouterLink>
         <span class="text-xs text-muted-foreground">{{ timeStr(createdAt) }}</span>
       </div>
-      <a
+      <button
         v-if="parentUsername && parentId"
-        :href="`#thread-item-${parentId}`"
         class="text-xs text-muted-foreground mb-1 hover:text-foreground transition-colors block"
-        @click.prevent="jumpToParent"
+        @click="jumpToParent"
       >
         {{ t('post.replyTo', {
           nickname: parentNickname,
           content: parentContent,
         }) }}
-      </a>
+      </button>
       <div class="text-sm" v-html="renderedContent" />
       <div class="flex items-center gap-0 -ml-2 mt-0.5">
         <Button
