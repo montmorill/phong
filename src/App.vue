@@ -1,7 +1,26 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import NavBrand from '@/components/NavBrand.vue'
 import NavUser from '@/components/NavUser.vue'
-import { user } from '@/lib/api'
+import { unreadCount, user } from '@/lib/api'
+
+let sse: EventSource | null = null
+
+onMounted(() => {
+  if (!user.value)
+    return
+  sse = new EventSource(`${window.location.origin}/api/events/sse`)
+  sse.onmessage = (e) => {
+    const event = JSON.parse(e.data) as { topic: string, payload: { recipientUsername?: string } }
+    if (event.topic.startsWith('notify.') && event.payload.recipientUsername === user.value?.username)
+      unreadCount.value++
+  }
+})
+
+onUnmounted(() => {
+  sse?.close()
+  sse = null
+})
 </script>
 
 <template>

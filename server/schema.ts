@@ -39,6 +39,13 @@ export const userBindings = sqliteTable('user_bindings', {
   primaryKey({ columns: [table.username, table.platform] }),
 ])
 
+export const userFollows = sqliteTable('user_follows', {
+  followerUsername: text('follower_username').notNull().references(() => users.username),
+  followingUsername: text('following_username').notNull().references(() => users.username),
+}, table => [
+  primaryKey({ columns: [table.followerUsername, table.followingUsername] }),
+])
+
 export const notifications = sqliteTable('notifications', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').notNull().references(() => users.username),

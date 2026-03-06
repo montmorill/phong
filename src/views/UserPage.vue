@@ -4,28 +4,46 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import PostList from '@/components/PostList.vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { useAvatar } from '@/composables/avatar'
-import { api } from '@/lib/api'
+import { api, user } from '@/lib/api'
 
 const route = useRoute()
 const { t } = useI18n()
 
 const pageUsername = computed(() => route.params.username as string)
 
-interface PublicProfile { username: string, nickname: string, avatar: string }
+interface PublicProfile { username: string, nickname: string, avatar: string, isFollowing: boolean }
 const profile = ref<PublicProfile | null>(null)
 const notFound = ref(false)
+const following = ref(false)
+const followLoading = ref(false)
 
 const { avatarUrl } = useAvatar(() => profile.value?.avatar)
+
+const isSelf = computed(() => user.value?.username === pageUsername.value)
 
 async function load() {
   profile.value = null
   notFound.value = false
   const { data, error } = await api.users({ username: pageUsername.value }).get()
-  if (error || !data)
+  if (error || !data) {
     notFound.value = true
-  else
+  }
+  else {
     profile.value = data as PublicProfile
+    following.value = profile.value.isFollowing
+  }
+}
+
+async function toggleFollow() {
+  if (!profile.value)
+    return
+  followLoading.value = true
+  const { data } = await api.users({ username: profile.value.username }).follow.post()
+  if (data)
+    following.value = data.following
+  followLoading.value = false
 }
 
 onMounted(load)
@@ -43,6 +61,16 @@ watch(pageUsername, load)
         <p class="text-xl font-bold">{{ profile.nickname }}</p>
         <p class="text-sm text-muted-foreground">@{{ profile.username }}</p>
       </div>
+      <Button
+        v-if="user && !isSelf"
+        :variant="following ? 'outline' : 'default'"
+        size="sm"
+        class="rounded-full px-5"
+        :disabled="followLoading"
+        @click="toggleFollow"
+      >
+        {{ following ? t('userPage.unfollow') : t('userPage.follow') }}
+      </Button>
     </div>
     <PostList :key="pageUsername" :username="pageUsername" disable-user-link />
   </div>

@@ -1,7 +1,8 @@
 import { Elysia } from 'elysia'
 import { bus } from '../events/bus'
+import * as FollowService from '../follow/service'
 import { jwtPlugin } from '../jwt'
-import { requireAuth } from './guard'
+import { optionalAuth, requireAuth } from './guard'
 import { loginBody, signupBody, updateProfileBody } from './model'
 import * as AuthService from './service'
 
@@ -30,12 +31,14 @@ export default new Elysia()
       return status(400, { message: 'error.badRequest', detail: error })
     },
   })
-  .get('/users/:username', ({ params, status }) => {
+  .use(optionalAuth)
+  .get('/users/:username', ({ params, status, username: viewerUsername }) => {
     const profile = AuthService.getByUsername(params.username)
     if (!profile)
       return status(404, { message: 'error.userNotFound' })
     const { username, nickname, avatar } = profile
-    return { username, nickname, avatar }
+    const isFollowing = viewerUsername ? FollowService.isFollowing(viewerUsername, username) : false
+    return { username, nickname, avatar, isFollowing }
   })
   .use(requireAuth)
   .get('/me', ({ username, status }) => {

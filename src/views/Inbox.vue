@@ -11,7 +11,7 @@ import { api, unreadCount } from '@/lib/api'
 
 interface NotificationItem {
   id: number
-  type: 'like' | 'reply'
+  type: 'like' | 'reply' | 'post'
   actorUsername: string
   actorNickname: string
   actorAvatar: string

@@ -19,8 +19,8 @@ export default new Elysia()
     PostService.listThread(Number(params.id), username))
   .use(requireAuth)
   .post('/posts', ({ body, status, username }) => {
-    PostService.create(username, body.content, body.title)
-    bus.publish('post.created', { username })
+    const postId = PostService.create(username, body.content, body.title)
+    bus.publish('post.created', { username, postId })
     return status(201, {})
   }, {
     body: createPostBody,

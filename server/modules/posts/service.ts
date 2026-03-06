@@ -132,7 +132,13 @@ export function listThread(rootId: number, viewerUsername?: string) {
     .orderBy(asc(posts.createdAt))
     .all()
 
-  const usernames = [...new Set(rows.map(r => r.username))]
+  const rootRow = db
+    .select({ id: posts.id, content: posts.content, username: posts.username })
+    .from(posts)
+    .where(eq(posts.id, rootId))
+    .get()
+
+  const usernames = [...new Set([...rows.map(r => r.username), ...(rootRow ? [rootRow.username] : [])])]
   const userMap = new Map(
     db.select({ username: users.username, nickname: users.nickname, avatar: users.avatar })
       .from(users)
@@ -151,10 +157,12 @@ export function listThread(rootId: number, viewerUsername?: string) {
   )
 
   const postMap = new Map(rows.map(r => [r.id, r]))
+  if (rootRow)
+    postMap.set(rootId, rootRow)
 
   return rows.map((r) => {
     const user = userMap.get(r.username)
-    const parent = r.parentId !== rootId ? postMap.get(r.parentId!) : undefined
+    const parent = postMap.get(r.parentId!)
     const parentUser = parent ? userMap.get(parent.username) : undefined
     return {
       id: r.id,

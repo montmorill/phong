@@ -102,8 +102,11 @@ inbox:
   empty: 暂无通知
   like: 赞了你的题壁
   reply: 回复了你的题壁
+  post: 发布了新题壁
 userPage:
   notFound: 用户不存在
+  follow: 关注
+  unfollow: 取消关注
 bind:
   title: 账号绑定
   qq: QQ
