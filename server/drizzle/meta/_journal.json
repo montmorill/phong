@@ -57,6 +57,13 @@
       "when": 1772797066455,
       "tag": "0007_bitter_warstar",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1772802160007,
+      "tag": "0008_previous_sandman",
+      "breakpoints": true
     }
   ]
 }

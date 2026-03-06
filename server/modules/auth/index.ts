@@ -47,8 +47,8 @@ export default new Elysia()
       return status(404, { message: 'error.userNotFound' })
     return user
   })
-  .patch('/me', ({ username, status, body }) => {
-    const user = AuthService.update(username, body)
+  .patch('/me', async ({ username, status, body }) => {
+    const user = await AuthService.update(username, body)
     if (!user)
       return status(404, { message: 'error.userNotFound' })
     return user

@@ -8,7 +8,9 @@ export default new Elysia()
     following: username ? FollowService.isFollowing(username, params.username) : false,
   }))
   .use(requireAuth)
-  .post('/users/:username/follow', ({ params, username }) => {
+  .post('/users/:username/follow', ({ params, username, status }) => {
+    if (params.username === username)
+      return status(400, { message: 'error.badRequest' })
     const following = FollowService.toggle(username, params.username)
     return { following }
   })

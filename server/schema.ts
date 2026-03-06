@@ -22,6 +22,7 @@ export const posts = sqliteTable('posts', {
   content: text('content').notNull(),
   username: text('username').notNull().references(() => users.username),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
 })
 
 export const postLikes = sqliteTable('post_likes', {
