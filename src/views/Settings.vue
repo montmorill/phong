@@ -187,9 +187,9 @@ onMounted(async () => {
   const { data } = await api.me['notification-prefs'].get()
   if (data)
     notifPrefs.value = data as Record<NotifType, boolean>
-  // Start watching only after initial load, so the assignment above doesn't trigger a PATCH
-  watch(notifPrefs, prefs => api.me['notification-prefs'].patch(prefs), { deep: true })
 })
+
+watch(notifPrefs, prefs => api.me['notification-prefs'].patch({ ...prefs }), { deep: true })
 </script>
 
 <template>
