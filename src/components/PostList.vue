@@ -43,12 +43,14 @@ defineExpose({ reload: load })
   <div v-if="loaded && posts.length === 0" class="text-center text-muted-foreground py-8">
     {{ t('post.empty') }}
   </div>
-  <PostItem
-    v-for="post in posts"
-    :key="post.id"
-    v-bind="post"
-    :disable-user-link="disableUserLink"
-    @deleted="onDeleted"
-    @liked="onLiked"
-  />
+  <div v-else class="space-y-3">
+    <PostItem
+      v-for="post in posts"
+      :key="post.id"
+      v-bind="post"
+      :disable-user-link="disableUserLink"
+      @deleted="onDeleted"
+      @liked="onLiked"
+    />
+  </div>
 </template>

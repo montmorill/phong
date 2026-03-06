@@ -21,6 +21,7 @@ const props = defineProps<{
   replyCount?: number
   liked: boolean
   expanded?: boolean
+  replyable?: boolean
   disableUserLink?: boolean
   parentId?: number
   parentNickname?: string
@@ -79,7 +80,7 @@ async function confirmDelete() {
 }
 
 function handleReplyClick() {
-  if (props.expanded)
+  if (props.expanded || props.replyable)
     emit('reply')
   else
     router.push(`/post/${props.id}#reply`)
@@ -87,86 +88,81 @@ function handleReplyClick() {
 </script>
 
 <template>
-  <div class="rounded-lg border bg-card text-card-foreground">
-    <div class="flex gap-3 px-4 pt-4 pb-1">
-      <div class="shrink-0">
-        <component :is="disableUserLink ? 'span' : RouterLink" :to="`/@${username}`">
-          <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" />
-        </component>
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-baseline gap-1.5 select-none">
-          <component
-            :is="disableUserLink ? 'span' : RouterLink"
-            :to="`/@${username}`"
-            class="text-sm font-semibold"
-            :class="{ 'hover:underline': !disableUserLink }"
-          >
-            {{ nickname }}
-          </component>
-          <span class="text-xs text-muted-foreground">· {{ timeStr(createdAt) }}</span>
-        </div>
-        <RouterLink
-          v-if="parentId && parentNickname"
-          :to="`/post/${parentId}`"
-          class="text-xs text-muted-foreground hover:text-foreground transition-colors block mb-0.5"
-        >
-          {{ t('post.replyTo', { nickname: parentNickname, content: parentContent }) }}
-        </RouterLink>
-        <RouterLink :to="`/post/${id}`" class="block mt-1">
-          <p v-if="title" class="font-semibold text-sm mb-0.5">{{ title }}</p>
-          <div class="relative">
-            <div
-              ref="contentRef"
-              class="text-sm"
-              :style="expanded ? undefined : 'max-height: 12rem; overflow: hidden'"
-              v-html="renderedContent"
-            />
-            <div
-              v-if="overflows"
-              class="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-card to-transparent"
-            />
-          </div>
-        </RouterLink>
-      </div>
+  <article
+    class="px-4 py-3 border rounded-xl bg-card transition-colors"
+    :class="{ 'hover:bg-muted/40 cursor-pointer': !expanded }"
+    @click="!expanded && router.push(`/post/${id}`)"
+  >
+    <div class="flex items-center gap-2 min-w-0" @click.stop>
+      <component :is="disableUserLink ? 'span' : RouterLink" :to="`/@${username}`" class="shrink-0">
+        <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" size="size-7" />
+      </component>
+      <component
+        :is="disableUserLink ? 'span' : RouterLink"
+        :to="`/@${username}`"
+        class="font-bold text-sm shrink-0"
+        :class="{ 'hover:underline': !disableUserLink }"
+      >
+        {{ nickname }}
+      </component>
+      <span class="text-sm text-muted-foreground truncate">@{{ username }}</span>
+      <span class="text-muted-foreground text-sm shrink-0">· {{ timeStr(createdAt) }}</span>
     </div>
-    <div class="flex items-center px-2 py-1.5 justify-between select-none">
-      <div class="flex gap-0">
-        <Button
-          variant="ghost"
-          size="sm"
-          class="gap-1 h-7 px-2 leading-none text-muted-foreground"
-          @click="handleReplyClick"
-        >
-          <MessageSquare class="size-4" />
-          <span v-if="replyCount !== undefined">{{ replyCount }}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          class="gap-1 h-7 px-2 leading-none"
-          :class="localLiked ? 'text-red-500' : 'text-muted-foreground'"
-          @click="handleLike"
-        >
-          <Heart class="size-4" :class="{ 'fill-current': localLiked }" />
-          {{ localLikeCount || '' }}
-        </Button>
-      </div>
-      <div class="flex items-center gap-1">
-        <RouterLink
-          v-if="overflows"
-          :to="`/post/${id}`"
-          class="text-xs text-muted-foreground hover:underline"
-        >
-          {{ t('post.readMore') }}
-        </RouterLink>
+
+    <div
+      v-if="parentId && parentNickname"
+      class="mt-2 px-3 py-2 border rounded-lg text-sm text-muted-foreground cursor-pointer hover:bg-muted/50 transition-colors line-clamp-2"
+      @click.stop="router.push(`/post/${parentId}`)"
+    >
+      <span class="font-medium text-foreground">{{ parentNickname }}</span>
+      <span v-if="parentContent">：{{ parentContent }}</span>
+    </div>
+
+    <div class="mt-2">
+      <p v-if="title" class="font-bold text-sm mb-1">{{ title }}</p>
+      <div
+        ref="contentRef"
+        class="text-sm leading-relaxed wrap-break-word"
+        :class="{ 'line-clamp-6': !expanded }"
+        v-html="renderedContent"
+      />
+      <span
+        v-if="overflows"
+        class="text-xs text-muted-foreground hover:underline cursor-pointer mt-0.5 inline-block"
+      >
+        {{ t('post.readMore') }}
+      </span>
+    </div>
+
+    <div class="flex items-center mt-2 -ml-2 select-none">
+      <Button
+        variant="ghost"
+        size="sm"
+        class="gap-1.5 h-8 px-2 text-sm text-muted-foreground rounded-full hover:text-sky-500 hover:bg-sky-500/10"
+        @click.stop="handleReplyClick"
+      >
+        <MessageSquare class="size-4" />
+        <span v-if="replyCount !== undefined" class="tabular-nums">{{ replyCount || '' }}</span>
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        class="gap-1.5 h-8 px-2 text-sm rounded-full transition-colors"
+        :class="localLiked
+          ? 'text-rose-500 hover:bg-rose-500/10'
+          : 'text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10'"
+        @click.stop="handleLike"
+      >
+        <Heart class="size-4" :class="{ 'fill-current': localLiked }" />
+        <span v-if="localLikeCount" class="tabular-nums">{{ localLikeCount }}</span>
+      </Button>
+      <span v-if="isOwn" @click.stop>
         <DeleteConfirmDialog
-          v-if="isOwn"
           :deleting="deleting"
-          button-class="h-7 px-2 leading-none"
+          button-class="h-8 px-2 rounded-full"
           @confirm="confirmDelete"
         />
-      </div>
+      </span>
     </div>
-  </div>
+  </article>
 </template>

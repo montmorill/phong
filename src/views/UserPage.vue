@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import PostList from '@/components/PostList.vue'
@@ -10,7 +10,7 @@ import { api } from '@/lib/api'
 const route = useRoute()
 const { t } = useI18n()
 
-const pageUsername = route.params.username as string
+const pageUsername = computed(() => route.params.username as string)
 
 interface PublicProfile { username: string, nickname: string, avatar: string }
 const profile = ref<PublicProfile | null>(null)
@@ -18,13 +18,18 @@ const notFound = ref(false)
 
 const { avatarUrl } = useAvatar(() => profile.value?.avatar)
 
-onMounted(async () => {
-  const { data, error } = await api.users({ username: pageUsername }).get()
+async function load() {
+  profile.value = null
+  notFound.value = false
+  const { data, error } = await api.users({ username: pageUsername.value }).get()
   if (error || !data)
     notFound.value = true
   else
     profile.value = data as PublicProfile
-})
+}
+
+onMounted(load)
+watch(pageUsername, load)
 </script>
 
 <template>
@@ -39,7 +44,7 @@ onMounted(async () => {
         <p class="text-sm text-muted-foreground">@{{ profile.username }}</p>
       </div>
     </div>
-    <PostList :username="pageUsername" disable-user-link />
+    <PostList :key="pageUsername" :username="pageUsername" disable-user-link />
   </div>
 
   <div v-else-if="notFound">

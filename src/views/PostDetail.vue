@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type * as PostService from '@server/posts/service'
-import { replyBody } from '@server/posts/model'
 import { ChevronLeft } from 'lucide-vue-next'
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import PostCompose from '@/components/PostCompose.vue'
 import PostItem from '@/components/PostItem.vue'
-import ReplyCompose from '@/components/ReplyCompose.vue'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { api, user } from '@/lib/api'
 
@@ -21,35 +21,35 @@ const router = useRouter()
 const route = useRoute()
 
 const post = ref<PostData | null>(null)
-const ancestors = ref<PostData[]>([])
+const parentNickname = ref<string | undefined>()
+const parentContent = ref<string | undefined>()
 const thread = ref<ThreadItem[]>([])
 const loading = ref(true)
 const notFound = ref(false)
 
 const replyingToId = ref<number | null>(null)
-const replyContent = ref('')
-const submitting = ref(false)
-const serverError = ref('')
-const maxLength = replyBody.properties.content.maxLength!
+const composeRef = ref<InstanceType<typeof PostCompose> | null>(null)
 
-const composeRef = ref<InstanceType<typeof ReplyCompose> | null>(null)
+function setComposeRef(el: unknown) {
+  composeRef.value = (el as InstanceType<typeof PostCompose>) ?? null
+}
 
-async function loadAncestors(item: PostData) {
-  ancestors.value = []
-  const chain: PostData[] = []
-  let currentParentId = item.parentId
-  while (currentParentId) {
-    const { data } = await api.posts({ id: currentParentId }).get()
-    if (!data)
-      break
-    const parent = data as PostData
-    chain.unshift(parent)
-    currentParentId = parent.parentId
+async function loadParent(parentId: number) {
+  const { data } = await api.posts({ id: parentId }).get()
+  if (data) {
+    const p = data as PostData
+    parentNickname.value = p.nickname
+    parentContent.value = p.content.slice(0, 60)
   }
-  ancestors.value = chain
 }
 
 async function load() {
+  post.value = null
+  parentNickname.value = undefined
+  parentContent.value = undefined
+  thread.value = []
+  notFound.value = false
+  replyingToId.value = null
   loading.value = true
   const { data: postData } = await api.posts({ id: props.id }).get()
   loading.value = false
@@ -61,7 +61,10 @@ async function load() {
 
   const item = postData as PostData
   post.value = item
-  await Promise.all([loadThread(), loadAncestors(item)])
+  const tasks: Promise<void>[] = [loadThread()]
+  if (item.parentId)
+    tasks.push(loadParent(item.parentId))
+  await Promise.all(tasks)
 
   if (route.hash === '#reply' && user.value)
     startReply(props.id)
@@ -81,26 +84,10 @@ async function startReply(targetId: number) {
   replyingToId.value = targetId
   await nextTick()
   composeRef.value?.focus()
+  composeRef.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
 }
 
-function cancelReply() {
-  replyingToId.value = null
-  replyContent.value = ''
-  serverError.value = ''
-}
-
-async function submitReply() {
-  if (!replyContent.value.trim() || !replyingToId.value)
-    return
-  submitting.value = true
-  serverError.value = ''
-  const { error } = await api.posts({ id: replyingToId.value }).reply.post({ content: replyContent.value.trim() })
-  submitting.value = false
-  if (error) {
-    serverError.value = t('post.errors.postFailed')
-    return
-  }
-  replyContent.value = ''
+async function onReplyPosted() {
   replyingToId.value = null
   await loadThread()
 }
@@ -119,6 +106,7 @@ function onReplyDeleted(id: number) {
 }
 
 onMounted(load)
+watch(() => props.id, load)
 </script>
 
 <template>
@@ -136,43 +124,46 @@ onMounted(load)
     </div>
     <template v-else-if="post">
       <PostItem
-        v-for="ancestor in ancestors"
-        :key="ancestor.id"
-        v-bind="ancestor"
-        class="opacity-70"
+        v-bind="post"
+        expanded
+        :parent-nickname="parentNickname"
+        :parent-content="parentContent"
+        @liked="onLiked"
+        @deleted="onDeleted"
+        @reply="startReply(post.id)"
       />
 
-      <PostItem v-bind="post" expanded @liked="onLiked" @deleted="onDeleted" @reply="startReply(post.id)" />
-
-      <ReplyCompose
+      <PostCompose
         v-if="replyingToId === post.id"
-        ref="composeRef"
-        v-model="replyContent"
-        :max-length="maxLength"
-        :submitting="submitting"
-        :server-error="serverError"
-        :placeholder="t('post.reply.placeholder')"
-        @submit="submitReply"
-        @cancel="cancelReply"
+        :ref="setComposeRef"
+        :parent-id="post.id"
+        @posted="onReplyPosted"
+        @cancel="replyingToId = null"
       />
 
-      <template v-for="item in thread" :key="item.id">
-        <PostItem
-          v-bind="item"
-          @reply="startReply(item.id)"
-          @deleted="onReplyDeleted"
-        />
-        <ReplyCompose
-          v-if="replyingToId === item.id"
-          ref="composeRef"
-          v-model="replyContent"
-          :max-length="maxLength"
-          :submitting="submitting"
-          :server-error="serverError"
-          :reply-to="item.nickname"
-          @submit="submitReply"
-          @cancel="cancelReply"
-        />
+      <template v-if="thread.length">
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-semibold">{{ t('post.comments') }}</span>
+          <Separator class="flex-1" />
+        </div>
+        <div class="space-y-3">
+          <template v-for="item in thread" :key="item.id">
+            <PostItem
+              v-bind="item"
+              replyable
+              @reply="startReply(item.id)"
+              @deleted="onReplyDeleted"
+            />
+            <PostCompose
+              v-if="replyingToId === item.id"
+              :ref="setComposeRef"
+              :parent-id="item.id"
+              :reply-to="item.nickname"
+              @posted="onReplyPosted"
+              @cancel="replyingToId = null"
+            />
+          </template>
+        </div>
       </template>
     </template>
   </div>

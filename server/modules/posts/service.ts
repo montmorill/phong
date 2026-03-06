@@ -58,11 +58,33 @@ function toItem(row: Row, likedIds: Set<number>) {
 
 export function list(viewerUsername?: string, filterUsername?: string) {
   const rows = query(and(
-    isNull(posts.parentId),
+    filterUsername ? undefined : isNull(posts.parentId),
     filterUsername ? eq(posts.username, filterUsername) : undefined,
   ))
   const likedIds = getLikedIds(viewerUsername)
-  return rows.map(r => toItem(r, likedIds))
+  const items = rows.map(r => toItem(r, likedIds))
+
+  if (!filterUsername)
+    return items
+
+  const parentIds = [...new Set(items.filter(i => i.parentId).map(i => i.parentId!))]
+  if (!parentIds.length)
+    return items
+
+  const parentRows = db
+    .select({ id: posts.id, content: posts.content, nickname: users.nickname })
+    .from(posts)
+    .leftJoin(users, eq(posts.username, users.username))
+    .where(inArray(posts.id, parentIds))
+    .all()
+  const parentMap = new Map(parentRows.map(r => [r.id, r]))
+
+  return items.map((item) => {
+    if (!item.parentId)
+      return item
+    const parent = parentMap.get(item.parentId)
+    return { ...item, parentNickname: parent?.nickname ?? undefined, parentContent: parent?.content.slice(0, 60) }
+  })
 }
 
 function findRoot(id: number): number {
