@@ -18,9 +18,12 @@ function logout() {
 
 <template>
   <DropdownMenu>
-    <DropdownMenuTrigger class="flex items-center gap-2">
+    <DropdownMenuTrigger class="flex items-center gap-2 cursor-pointer">
       <span class="text-sm">{{ nickname }}</span>
-      <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" size="size-9" class="cursor-pointer" />
+      <div class="relative">
+        <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" size="size-9" />
+        <span v-if="unreadCount > 0" class="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-blue-500 border-2 border-background" />
+      </div>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="w-40">
       <DropdownMenuItem as-child>

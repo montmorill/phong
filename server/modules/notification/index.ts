@@ -11,3 +11,7 @@ export default new Elysia()
     NotificationService.markAllRead(username)
     return {}
   })
+  .post('/notifications/:id/read', ({ params, username }) => {
+    NotificationService.markRead(Number(params.id), username)
+    return {}
+  })

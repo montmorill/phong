@@ -18,6 +18,7 @@ interface NotificationItem {
   postId: number
   postContent: string
   replyId?: number
+  replyContent?: string
   read: boolean
   createdAt: number
 }
@@ -34,8 +35,6 @@ onMounted(async () => {
   loading.value = false
   if (data)
     items.value = data as NotificationItem[]
-  await api.notifications.read.post()
-  unreadCount.value = 0
 })
 
 function resolveAvatarUrl(avatar: string): string {
@@ -45,8 +44,13 @@ function resolveAvatarUrl(avatar: string): string {
   return ''
 }
 
-function navigate(item: NotificationItem) {
-  router.push(item.type === 'reply' ? `/post/${item.postId}#reply` : `/post/${item.postId}`)
+async function navigate(item: NotificationItem) {
+  if (!item.read) {
+    item.read = true
+    unreadCount.value = Math.max(0, unreadCount.value - 1)
+    api.notifications({ id: item.id }).read.post()
+  }
+  router.push(item.type === 'reply' && item.replyId ? `/post/${item.replyId}` : `/post/${item.postId}`)
 }
 </script>
 
@@ -84,6 +88,7 @@ function navigate(item: NotificationItem) {
             <span v-if="!item.read" class="size-1.5 rounded-full bg-blue-500 shrink-0" />
           </div>
           <p class="text-xs text-muted-foreground mt-0.5 truncate">{{ item.postContent }}</p>
+          <p v-if="item.replyContent" class="text-xs mt-0.5 truncate">{{ item.replyContent }}</p>
           <p class="text-xs text-muted-foreground mt-0.5">{{ timeStr(item.createdAt) }}</p>
         </div>
       </div>
