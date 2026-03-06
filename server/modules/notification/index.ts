@@ -1,6 +1,8 @@
+import { t } from 'elysia'
 import { Elysia } from 'elysia'
 import { requireAuth } from '../auth/guard'
 import * as NotificationService from './service'
+import * as PrefsService from './prefs'
 import './service'
 
 export default new Elysia()
@@ -14,4 +16,15 @@ export default new Elysia()
   .post('/notifications/:id/read', ({ params, username }) => {
     NotificationService.markRead(Number(params.id), username)
     return {}
+  })
+  .get('/me/notification-prefs', ({ username }) => PrefsService.getPrefs(username))
+  .patch('/me/notification-prefs', ({ username, body }) => {
+    PrefsService.setPrefs(username, body)
+    return PrefsService.getPrefs(username)
+  }, {
+    body: t.Object({
+      like: t.Optional(t.Boolean()),
+      reply: t.Optional(t.Boolean()),
+      post: t.Optional(t.Boolean()),
+    }),
   })

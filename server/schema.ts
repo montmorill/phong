@@ -1,5 +1,8 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
+export type NotificationType = 'like' | 'reply' | 'post'
+export const NOTIFICATION_TYPES: NotificationType[] = ['like', 'reply', 'post']
+
 export const users = sqliteTable('users', {
   username: text('username').notNull().unique().primaryKey(),
   nickname: text('nickname').notNull(),
@@ -45,6 +48,14 @@ export const userFollows = sqliteTable('user_follows', {
   followingUsername: text('following_username').notNull().references(() => users.username),
 }, table => [
   primaryKey({ columns: [table.followerUsername, table.followingUsername] }),
+])
+
+export const notificationPrefs = sqliteTable('notification_prefs', {
+  username: text('username').notNull().references(() => users.username),
+  type: text('type').notNull(), // 'like' | 'reply' | 'post'
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+}, table => [
+  primaryKey({ columns: [table.username, table.type] }),
 ])
 
 export const notifications = sqliteTable('notifications', {

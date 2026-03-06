@@ -10,9 +10,8 @@ home:
 nav:
   profile: 个人主页
   inbox: 收件箱
-  bind: 账号绑定
   admin: 管理后台
-  settings: 资料设置
+  settings: 设置
   logout: 退出登录
   post: 题壁
 login:
@@ -32,6 +31,34 @@ profile:
   save: 保存
   saving: 保存中…
   saved: 已保存
+settings:
+  title: 设置
+  tabs:
+    profile: 个人资料
+    theme: 主题
+    bind: 平台绑定
+    notifications: 通知设置
+  themeHint: 选择界面显示的外观主题。
+  theme:
+    light: 亮色
+    dark: 暗色
+    system: 跟随系统
+  notifications:
+    subscribe: 订阅设置
+    type:
+      like:
+        label: 点赞
+        desc: 有人赞了你的题壁时通知你
+      reply:
+        label: 回复
+        desc: 有人回复了你的题壁时通知你
+      post:
+        label: 关注的人发帖
+        desc: 你关注的人发布新题壁时通知你
+    inbox: 收件箱
+    markAllRead: 全部标为已读
+    markAllReadDone: 已全部标为已读
+    markAllReadHint: 将所有未读通知标记为已读。
 validation:
   required: '{label}不能为空'
   minLength: '{label}至少 {min} 个字符'

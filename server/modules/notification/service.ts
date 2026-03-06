@@ -4,6 +4,7 @@ import { alias } from 'drizzle-orm/sqlite-core'
 import { db, notifications, posts, userBindings, users } from 'server/db'
 import { bus } from '../events/bus'
 import * as FollowService from '../follow/service'
+import { isPrefEnabled } from './prefs'
 
 function getActor(username: string) {
   return db
@@ -30,6 +31,8 @@ function onPostLiked({ postId, actorUsername, liked }: AppEventMap['post.liked']
   const post = db.select({ username: posts.username, content: posts.content }).from(posts).where(eq(posts.id, postId)).get()
   if (!post || post.username === actorUsername)
     return
+  if (!isPrefEnabled(post.username, 'like'))
+    return
   const actor = getActor(actorUsername)
   db.insert(notifications).values({ username: post.username, type: 'like', actorUsername, postId }).run()
   bus.publish('notify.post.liked', {
@@ -47,6 +50,8 @@ function onPostCreated({ username: actorUsername, postId }: AppEventMap['post.cr
   const actor = getActor(actorUsername)
   const post = db.select({ content: posts.content }).from(posts).where(eq(posts.id, postId)).get()
   for (const username of FollowService.getFollowers(actorUsername)) {
+    if (!isPrefEnabled(username, 'post'))
+      continue
     db.insert(notifications).values({ username, type: 'post', actorUsername, postId }).run()
     bus.publish('notify.post.created', {
       recipientUsername: username,
@@ -63,6 +68,8 @@ function onPostCreated({ username: actorUsername, postId }: AppEventMap['post.cr
 function onPostReplied({ parentId, actorUsername, replyId }: AppEventMap['post.replied']) {
   const post = db.select({ username: posts.username, content: posts.content }).from(posts).where(eq(posts.id, parentId)).get()
   if (!post || post.username === actorUsername)
+    return
+  if (!isPrefEnabled(post.username, 'reply'))
     return
   const actor = getActor(actorUsername)
   const reply = db.select({ content: posts.content }).from(posts).where(eq(posts.id, replyId)).get()
