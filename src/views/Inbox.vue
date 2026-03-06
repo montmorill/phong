@@ -4,6 +4,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { parseAvatar, PROVIDERS } from '@/composables/avatar'
 import useTimeStr from '@/composables/useTimeStr'
@@ -48,6 +49,20 @@ const timeStr = useTimeStr()
 
 const displayItems = ref<DisplayItem[]>([])
 const loading = ref(true)
+const markingAllRead = ref(false)
+const allMarked = ref(false)
+
+async function markAllRead() {
+  markingAllRead.value = true
+  await api.notifications.read.post()
+  unreadCount.value = 0
+  for (const item of displayItems.value) {
+    item.unreadIds = []
+    item.read = true
+  }
+  markingAllRead.value = false
+  allMarked.value = true
+}
 
 onMounted(async () => {
   const { data } = await api.notifications.get()
@@ -174,6 +189,17 @@ function registerItem(el: Element | null, item: DisplayItem) {
       <h1 class="text-lg font-semibold">
         {{ t('inbox.title') }}
       </h1>
+      <Button
+        v-if="displayItems.length"
+        variant="ghost"
+        size="sm"
+        class="ml-auto text-xs text-muted-foreground"
+        :disabled="markingAllRead || allMarked"
+        @click="markAllRead"
+      >
+        <Spinner v-if="markingAllRead" data-icon="inline-start" />
+        {{ allMarked ? t('settings.notifications.markAllReadDone') : t('settings.notifications.markAllRead') }}
+      </Button>
     </div>
 
     <div v-if="loading" class="flex justify-center py-8">
