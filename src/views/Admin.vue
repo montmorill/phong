@@ -1,5 +1,7 @@
 <!-- eslint-disable no-console -->
 <script setup lang="ts">
+import type { EventEntry } from './admin/AdminEvents.vue'
+import type { LogEntry } from './admin/AdminLog.vue'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
@@ -39,10 +41,6 @@ function setTab(t: Tab) {
 window.addEventListener('hashchange', () => {
   tab.value = getTabFromHash()
 })
-
-// ── Shared types ──────────────────────────────────────────────────────────────
-interface LogEntry { level: string, message: string, timestamp: number }
-interface EventEntry { topic: string, payload: unknown, timestamp: number }
 
 // ── Backend logs (WebSocket) ──────────────────────────────────────────────────
 const backendLogs = ref<LogEntry[]>([])

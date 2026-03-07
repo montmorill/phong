@@ -1,6 +1,10 @@
+<!-- eslint-disable no-alert -->
 <script setup lang="ts">
+import { ChevronDown } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Spinner } from '@/components/ui/spinner'
 
 type Row = Record<string, unknown>
@@ -158,11 +162,24 @@ onMounted(loadTables)
 <template>
   <div class="flex-1 flex flex-col overflow-hidden">
     <div class="flex items-center gap-2 px-4 py-2 border-b shrink-0 flex-wrap">
-      <select v-model="selectedTable" class="text-sm border rounded px-2 py-1 bg-background">
-        <option v-for="t in tables" :key="t" :value="t">
-          {{ t }}
-        </option>
-      </select>
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button variant="outline" class="shrink-0 gap-1">
+            {{ selectedTable }}
+            <ChevronDown class="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuRadioGroup v-model="selectedTable">
+            <DropdownMenuRadioItem
+              v-for="table in tables"
+              :key="table" :value="table"
+            >
+              {{ table }}
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Button size="sm" variant="outline" :disabled="loadingTable" @click="loadTable">
         <Spinner v-if="loadingTable" data-icon="inline-start" />
         刷新
@@ -181,7 +198,7 @@ onMounted(loadTables)
       </template>
     </div>
 
-    <div class="flex-1 overflow-auto">
+    <ScrollArea class="flex-1">
       <table class="text-xs w-full border-collapse">
         <thead class="sticky top-0 bg-background shadow-[0_1px_0_0_var(--border)]">
           <tr>
@@ -266,6 +283,6 @@ onMounted(loadTables)
       <div v-if="tableRows.length === 0 && !loadingTable && !insertDraft" class="text-muted-foreground py-8 text-center text-sm">
         暂无数据
       </div>
-    </div>
+    </ScrollArea>
   </div>
 </template>
