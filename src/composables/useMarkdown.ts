@@ -32,6 +32,6 @@ marked.use({
 
 export function useMarkdown(content: MaybeRefOrGetter<string>) {
   return computedAsync(async () =>
-    DOMPurify.sanitize(await marked.parse(toValue(content))),
+    DOMPurify.sanitize(await marked.parse(toValue(content).normalize())),
   )
 }
