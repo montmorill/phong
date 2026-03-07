@@ -37,7 +37,7 @@ export const postLikes = sqliteTable('post_likes', {
 
 export const userBindings = sqliteTable('user_bindings', {
   username: text('username').notNull().references(() => users.username),
-  platform: text('platform').notNull(), // 'qq' | 'github' | 'weibo'
+  platform: text('platform').notNull(),
   platformId: text('platform_id').notNull(),
 }, table => [
   primaryKey({ columns: [table.username, table.platform] }),

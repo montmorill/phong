@@ -81,6 +81,10 @@ async function startReply(targetId: number) {
     router.push('/login')
     return
   }
+  if (replyingToId.value === targetId) {
+    replyingToId.value = null
+    return
+  }
   replyingToId.value = targetId
   await nextTick()
   composeRef.value?.focus()
@@ -122,8 +126,8 @@ watch(() => props.id, load)
 </script>
 
 <template>
-  <div class="w-full mb-auto max-w-2xl px-4 py-8 space-y-4">
-    <Button variant="ghost" size="sm" class="gap-1 -ml-2 text-muted-foreground" @click="router.back()">
+  <div class="w-full mb-auto max-w-2xl px-4 py-8">
+    <Button variant="ghost" size="sm" class="gap-1 -ml-2 mb-4 text-muted-foreground" @click="router.back()">
       <ChevronLeft class="size-4" />
       {{ t('common.back') }}
     </Button>
@@ -146,38 +150,47 @@ watch(() => props.id, load)
         @quote-click="onQuoteClick"
       />
 
-      <PostCompose
-        v-if="replyingToId === post.id"
-        :ref="setComposeRef"
-        :parent-id="post.id"
-        @posted="onReplyPosted"
-        @cancel="replyingToId = null"
-      />
+      <template v-if="replyingToId === post.id">
+        <div class="ml-6 w-0.5 h-4 bg-border" />
+        <PostCompose
+          :ref="setComposeRef"
+          :parent-id="post.id"
+          @posted="onReplyPosted"
+          @cancel="replyingToId = null"
+        />
+      </template>
 
       <template v-if="thread.length">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 my-4">
           <span class="text-sm font-semibold">{{ t('post.comments') }}</span>
           <Separator class="flex-1" />
         </div>
-        <div class="space-y-3">
-          <template v-for="item in thread" :key="item.id">
+        <div>
+          <template v-for="(item, index) in thread" :key="item.id">
+            <div
+              v-if="index > 0 && item.parentId === thread[index - 1]?.id && replyingToId !== thread[index - 1]?.id"
+              class="ml-6 w-0.5 h-4 bg-border"
+            />
+            <div v-else-if="index > 0" class="h-3" />
             <PostItem
               v-bind="item"
               replyable
-              :parent-nickname="item.parentId === post.id ? undefined : item.parentNickname"
-              :parent-content="item.parentId === post.id ? undefined : item.parentContent"
+              :parent-nickname="item.parentId === post.id || (index > 0 && item.parentId === thread[index - 1]?.id && replyingToId !== thread[index - 1]?.id) ? undefined : item.parentNickname"
+              :parent-content="item.parentId === post.id || (index > 0 && item.parentId === thread[index - 1]?.id && replyingToId !== thread[index - 1]?.id) ? undefined : item.parentContent"
               @reply="startReply(item.id)"
               @deleted="onReplyDeleted"
               @quote-click="onQuoteClick"
             />
-            <PostCompose
-              v-if="replyingToId === item.id"
-              :ref="setComposeRef"
-              :parent-id="item.id"
-              :reply-to="item.nickname"
-              @posted="onReplyPosted"
-              @cancel="replyingToId = null"
-            />
+            <template v-if="replyingToId === item.id">
+              <div class="ml-6 w-0.5 h-4 bg-border" />
+              <PostCompose
+                :ref="setComposeRef"
+                :parent-id="item.id"
+                :reply-to="item.nickname"
+                @posted="onReplyPosted"
+                @cancel="replyingToId = null"
+              />
+            </template>
           </template>
         </div>
       </template>

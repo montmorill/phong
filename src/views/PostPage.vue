@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue'
 import { Translation, useI18n } from 'vue-i18n'
 import PostCompose from '@/components/PostCompose.vue'
 import PostList from '@/components/PostList.vue'
 import { user } from '@/lib/api'
+
+defineOptions({ name: 'PostPage' })
 
 const { t } = useI18n()
 
@@ -11,19 +13,24 @@ const postList = ref<InstanceType<typeof PostList> | null>(null)
 
 let sse: EventSource | null = null
 
-onMounted(() => {
+function openSse() {
   sse = new EventSource(`${window.location.origin}/api/events/sse`)
   sse.onmessage = (e) => {
     const { topic } = JSON.parse(e.data) as { topic: string }
     if (topic === 'post.created')
       postList.value?.reload()
   }
-})
+}
 
-onUnmounted(() => {
+function closeSse() {
   sse?.close()
   sse = null
-})
+}
+
+onMounted(openSse)
+onUnmounted(closeSse)
+onActivated(openSse)
+onDeactivated(closeSse)
 </script>
 
 <template>

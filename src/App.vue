@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import NavBrand from '@/components/NavBrand.vue'
 import NavUser from '@/components/NavUser.vue'
 import { unreadCount, user } from '@/lib/api'
@@ -21,6 +22,23 @@ onUnmounted(() => {
   sse?.close()
   sse = null
 })
+
+const mainRef = ref<HTMLElement | null>(null)
+const scrollPositions = new Map<string, number>()
+const router = useRouter()
+
+router.beforeEach((_, from) => {
+  if (mainRef.value)
+    scrollPositions.set(from.path, mainRef.value.scrollTop)
+})
+
+router.afterEach((to) => {
+  const saved = scrollPositions.get(to.path)
+  requestAnimationFrame(() => {
+    if (mainRef.value)
+      mainRef.value.scrollTop = saved ?? 0
+  })
+})
 </script>
 
 <template>
@@ -29,8 +47,12 @@ onUnmounted(() => {
       <NavBrand />
       <NavUser v-if="user" v-bind="user" />
     </header>
-    <main class="h-[calc(100vh-4em)] overflow-y-auto flex flex-col items-center">
-      <RouterView />
+    <main ref="mainRef" class="h-[calc(100vh-4em)] overflow-y-auto flex flex-col items-center">
+      <RouterView v-slot="{ Component }">
+        <KeepAlive include="PostPage">
+          <component :is="Component" />
+        </KeepAlive>
+      </RouterView>
     </main>
   </div>
 </template>

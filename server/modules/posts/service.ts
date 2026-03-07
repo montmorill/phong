@@ -185,7 +185,20 @@ export function listThread(rootId: number, viewerUsername?: string) {
   if (rootRow)
     postMap.set(rootId, rootRow)
 
-  return rows.map((r) => {
+  // Reorder rows by depth-first traversal so replies appear right after their parent
+  const childrenMap = new Map<number, typeof rows>()
+  for (const r of rows) {
+    const pid = r.parentId!
+    if (!childrenMap.has(pid))
+      childrenMap.set(pid, [])
+    childrenMap.get(pid)!.push(r)
+  }
+  function dfs(parentId: number): typeof rows {
+    return (childrenMap.get(parentId) ?? []).flatMap(r => [r, ...dfs(r.id)])
+  }
+  const sorted = dfs(rootId)
+
+  return sorted.map((r) => {
     const user = userMap.get(r.username)
     const parent = postMap.get(r.parentId!)
     const parentUser = parent ? userMap.get(parent.username) : undefined
