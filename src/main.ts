@@ -6,6 +6,9 @@ import { i18n } from './i18n'
 import { fetchUnreadCount, fetchUser, user } from './lib/api'
 import './style.css'
 
+if ('scrollRestoration' in history)
+  history.scrollRestoration = 'manual'
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [

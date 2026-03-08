@@ -96,7 +96,7 @@ export function list(viewerUsername?: string, filterUsername?: string) {
   })
 }
 
-function findRoot(id: number): number {
+export function findRoot(id: number): number {
   let current = id
   while (true) {
     const row = db
@@ -218,6 +218,23 @@ export function listThread(rootId: number, viewerUsername?: string) {
       parentContent: parent?.content,
     }
   })
+}
+
+export function listAncestors(id: number, viewerUsername?: string) {
+  const ancestorIds = db.all<{ id: number }>(sql`
+    WITH RECURSIVE anc(id, parent_id) AS (
+      SELECT id, parent_id FROM ${posts} WHERE id = ${id}
+      UNION ALL
+      SELECT p.id, p.parent_id FROM ${posts} p INNER JOIN anc ON p.id = anc.parent_id
+    )
+    SELECT id FROM anc WHERE id != ${id}
+  `).map(r => r.id)
+
+  if (!ancestorIds.length)
+    return []
+
+  const likedIds = getLikedIds(viewerUsername)
+  return query(inArray(posts.id, ancestorIds), 'asc').map(row => toItem(row, likedIds))
 }
 
 export function listReplies(parentId: number, viewerUsername?: string) {

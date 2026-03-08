@@ -40,6 +40,10 @@ const { t } = useI18n()
 const router = useRouter()
 const timeStr = useTimeStr()
 
+function openPost() {
+  router.push(`/post/${props.id}`)
+}
+
 const renderedContent = useMarkdown(() => props.content)
 const isOwn = computed(() => user.value?.username === props.username)
 
@@ -109,7 +113,7 @@ function handleReplyClick() {
       :id="`post-${id}`"
       class="px-4 py-3 border rounded-xl bg-card transition-[colors,box-shadow]"
       :class="{ 'hover:bg-muted/40 cursor-pointer': !expanded }"
-      @click="!expanded && router.push(`/post/${id}`)"
+      @click="!expanded && openPost()"
     >
       <div class="flex items-center gap-2 min-w-0" @click.stop>
         <component :is="disableUserLink ? 'span' : RouterLink" :to="`/@${username}`" class="shrink-0">

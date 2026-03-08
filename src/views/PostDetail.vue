@@ -13,6 +13,7 @@ import { api, user } from '@/lib/api'
 
 type PostData = NonNullable<ReturnType<typeof PostService.get>>
 type ThreadItem = ReturnType<typeof PostService.listThread>[number]
+type AncestorItem = ReturnType<typeof PostService.listAncestors>[number]
 
 const props = defineProps<{ id: number }>()
 
@@ -21,8 +22,7 @@ const router = useRouter()
 const route = useRoute()
 
 const post = ref<PostData | null>(null)
-const parentNickname = ref<string | undefined>()
-const parentContent = ref<string | undefined>()
+const ancestors = ref<AncestorItem[]>([])
 const thread = ref<ThreadItem[]>([])
 const loading = ref(true)
 const notFound = ref(false)
@@ -34,19 +34,15 @@ function setComposeRef(el: unknown) {
   composeRef.value = (el as InstanceType<typeof PostCompose>) ?? null
 }
 
-async function loadParent(parentId: number) {
-  const { data } = await api.posts({ id: parentId }).get()
-  if (data) {
-    const p = data as PostData
-    parentNickname.value = p.nickname
-    parentContent.value = p.content
-  }
+async function loadAncestors() {
+  const { data } = await (api.posts({ id: props.id }) as any).ancestors.get()
+  if (data)
+    ancestors.value = data as AncestorItem[]
 }
 
 async function load() {
   post.value = null
-  parentNickname.value = undefined
-  parentContent.value = undefined
+  ancestors.value = []
   thread.value = []
   notFound.value = false
   replyingToId.value = null
@@ -63,7 +59,7 @@ async function load() {
   post.value = item
   const tasks: Promise<void>[] = [loadThread()]
   if (item.parentId)
-    tasks.push(loadParent(item.parentId))
+    tasks.push(loadAncestors())
   await Promise.all(tasks)
 
   if (route.hash === '#reply' && user.value)
@@ -139,11 +135,22 @@ watch(() => props.id, load)
       {{ t('post.notFound') }}
     </div>
     <template v-else-if="post">
+      <template v-for="(ancestor, i) in ancestors" :key="ancestor.id">
+        <div
+          class="px-3 py-2 border rounded-lg text-sm text-muted-foreground cursor-pointer bg-muted/30 hover:bg-muted/50 transition-colors truncate"
+          @click="onQuoteClick(ancestor.id)"
+        >
+          <span class="font-medium text-foreground">{{ ancestor.nickname }}</span>
+          {{ `: ${ancestor.content}` }}
+        </div>
+        <div
+          class="ml-5 w-0.5 bg-border"
+          :class="i < ancestors.length - 1 ? 'h-3' : 'h-4'"
+        />
+      </template>
       <PostItem
         v-bind="post"
         expanded
-        :parent-nickname="parentNickname"
-        :parent-content="parentContent"
         @liked="onLiked"
         @deleted="onDeleted"
         @reply="startReply(post.id)"

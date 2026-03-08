@@ -128,7 +128,7 @@ inbox:
   empty: 暂无通知
   read: 已读
   like: 赞了你的题壁
-  likeActorsSep: '、'
+  likeActorsSep: 、
   likeActors: ' 等 {count} 人'
   reply: 回复了你的题壁
   post: 发布了新题壁

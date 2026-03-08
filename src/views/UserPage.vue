@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import PostList from '@/components/PostList.vue'
@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useAvatar } from '@/composables/avatar'
 import { api, user } from '@/lib/api'
+
+defineOptions({ name: 'UserPage' })
 
 const route = useRoute()
 const { t } = useI18n()
@@ -57,8 +59,25 @@ async function toggleFollow() {
   followLoading.value = false
 }
 
+function getViewport() {
+  return document.querySelector<HTMLElement>('[data-reka-scroll-area-viewport]')
+}
+
+let savedScrollTop = 0
+
+onDeactivated(() => {
+  savedScrollTop = getViewport()?.scrollTop ?? 0
+})
+
+onActivated(() => {
+  getViewport()!.scrollTop = savedScrollTop
+})
+
 onMounted(load)
-watch(pageUsername, load)
+watch(pageUsername, () => {
+  savedScrollTop = 0
+  load()
+})
 </script>
 
 <template>

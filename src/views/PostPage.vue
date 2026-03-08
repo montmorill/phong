@@ -27,10 +27,22 @@ function closeSse() {
   sse = null
 }
 
+function getViewport() {
+  return document.querySelector<HTMLElement>('[data-reka-scroll-area-viewport]')
+}
+
+let savedScrollTop = 0
+
 onMounted(openSse)
 onUnmounted(closeSse)
-onActivated(openSse)
-onDeactivated(closeSse)
+onActivated(() => {
+  openSse()
+  getViewport()!.scrollTop = savedScrollTop
+})
+onDeactivated(() => {
+  closeSse()
+  savedScrollTop = getViewport()?.scrollTop ?? 0
+})
 </script>
 
 <template>

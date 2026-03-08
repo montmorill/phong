@@ -186,9 +186,7 @@ function resolveAvatarUrl(avatar: string): string {
 async function navigate(item: DisplayItem) {
   if (item.type !== 'like' && item.unreadIds.length)
     markItemRead(item)
-  router.push(item.type === 'reply' && item.replyId
-    ? `/post/${item.replyId}`
-    : `/post/${item.postId}`)
+  router.push(`/post/${item.postId}`)
 }
 </script>
 

@@ -17,6 +17,8 @@ export default new Elysia()
   })
   .get('/posts/:id/thread', ({ params, username }) =>
     PostService.listThread(Number(params.id), username))
+  .get('/posts/:id/ancestors', ({ params, username }) =>
+    PostService.listAncestors(Number(params.id), username))
   .use(requireAuth)
   .post('/posts', ({ body, status, username }) => {
     const postId = PostService.create(username, body.content, body.title)

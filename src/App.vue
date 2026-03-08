@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBrand from '@/components/NavBrand.vue'
 import NavUser from '@/components/NavUser.vue'
@@ -24,22 +24,36 @@ onUnmounted(() => {
   sse = null
 })
 
-const scrollAreaRef = ref<{ viewport: HTMLElement | null } | null>(null)
+function getViewport(): HTMLElement | null {
+  return document.querySelector('[data-reka-scroll-area-viewport]')
+}
+
 const scrollPositions = new Map<string, number>()
 const router = useRouter()
 
+const keepAlivePaths = ['/post', /^\/@/]
+
+function isKeepAlive(path: string) {
+  return keepAlivePaths.some(p => typeof p === 'string' ? p === path : p.test(path))
+}
+
 router.beforeEach((_, from) => {
-  const el = scrollAreaRef.value?.viewport
+  if (isKeepAlive(from.path))
+    return
+  const el = getViewport()
   if (el)
     scrollPositions.set(from.path, el.scrollTop)
 })
 
-router.afterEach(async (to) => {
+router.afterEach((to) => {
+  if (isKeepAlive(to.path))
+    return
   const saved = scrollPositions.get(to.path)
-  await nextTick()
-  const el = scrollAreaRef.value?.viewport
-  if (el)
-    el.scrollTop = saved ?? 0
+  requestAnimationFrame(() => {
+    const el = getViewport()
+    if (el)
+      el.scrollTop = saved ?? 0
+  })
 })
 </script>
 
@@ -49,10 +63,10 @@ router.afterEach(async (to) => {
       <NavBrand />
       <NavUser v-if="user" v-bind="user" />
     </header>
-    <ScrollArea ref="scrollAreaRef" class="h-[calc(100vh-4rem)] w-full">
+    <ScrollArea class="h-[calc(100vh-4rem)] w-full">
       <main class="flex flex-col items-center min-h-[calc(100vh-4rem)]">
         <RouterView v-slot="{ Component }">
-          <KeepAlive include="PostPage">
+          <KeepAlive include="PostPage,UserPage">
             <component :is="Component" />
           </KeepAlive>
         </RouterView>
