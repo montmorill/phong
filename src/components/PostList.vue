@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import PostItem from '@/components/PostItem.vue'
 import { api } from '@/lib/api'
 
@@ -10,6 +11,7 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const router = useRouter()
 
 type PostData = NonNullable<Awaited<ReturnType<typeof api.posts.get>>['data']>[number]
 
@@ -35,6 +37,11 @@ function onLiked(id: number, liked: boolean, likeCount: number) {
   }
 }
 
+function onQuoteClick(postId: number, parentId: number) {
+  sessionStorage.setItem('scrollToPost', `post-${postId}`)
+  router.push(`/post/${parentId}`)
+}
+
 onMounted(load)
 defineExpose({ reload: load })
 </script>
@@ -51,7 +58,7 @@ defineExpose({ reload: load })
       :disable-user-link="disableUserLink"
       @deleted="onDeleted"
       @liked="onLiked"
-      @quote-click="id => $router.push(`/post/${id}`)"
+      @quote-click="parentId => onQuoteClick(post.id, parentId)"
     />
   </div>
 </template>

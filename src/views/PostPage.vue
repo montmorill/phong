@@ -3,6 +3,7 @@ import { onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue'
 import { Translation, useI18n } from 'vue-i18n'
 import PostCompose from '@/components/PostCompose.vue'
 import PostList from '@/components/PostList.vue'
+import { useScrollRestore } from '@/composables/useScrollRestore'
 import { user } from '@/lib/api'
 
 defineOptions({ name: 'PostPage' })
@@ -27,22 +28,11 @@ function closeSse() {
   sse = null
 }
 
-function getViewport() {
-  return document.querySelector<HTMLElement>('[data-reka-scroll-area-viewport]')
-}
-
-let savedScrollTop = 0
-
 onMounted(openSse)
 onUnmounted(closeSse)
-onActivated(() => {
-  openSse()
-  getViewport()!.scrollTop = savedScrollTop
-})
-onDeactivated(() => {
-  closeSse()
-  savedScrollTop = getViewport()?.scrollTop ?? 0
-})
+onActivated(openSse)
+onDeactivated(closeSse)
+useScrollRestore()
 </script>
 
 <template>

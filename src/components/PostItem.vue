@@ -41,6 +41,7 @@ const router = useRouter()
 const timeStr = useTimeStr()
 
 function openPost() {
+  sessionStorage.setItem('scrollToPost', `post-${props.id}`)
   router.push(`/post/${props.id}`)
 }
 
@@ -115,8 +116,8 @@ function handleReplyClick() {
       :class="{ 'hover:bg-muted/40 cursor-pointer': !expanded }"
       @click="!expanded && openPost()"
     >
-      <div class="flex items-center gap-2 min-w-0" @click.stop>
-        <component :is="disableUserLink ? 'span' : RouterLink" :to="`/@${username}`" class="shrink-0">
+      <div class="flex items-center gap-2 min-w-0">
+        <component :is="disableUserLink ? 'span' : RouterLink" :to="`/@${username}`" class="shrink-0" @click.stop>
           <UserAvatar :username="username" :nickname="nickname" :avatar="avatar" size="size-7" />
         </component>
         <component
@@ -124,6 +125,7 @@ function handleReplyClick() {
           :to="`/@${username}`"
           class="font-bold text-sm shrink-0"
           :class="{ 'hover:underline': !disableUserLink }"
+          @click.stop
         >
           {{ nickname }}
         </component>

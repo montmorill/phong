@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import PostList from '@/components/PostList.vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useAvatar } from '@/composables/avatar'
+import { useScrollRestore } from '@/composables/useScrollRestore'
 import { api, user } from '@/lib/api'
 
 defineOptions({ name: 'UserPage' })
@@ -32,10 +33,14 @@ const { avatarUrl } = useAvatar(() => profile.value?.avatar)
 
 const isSelf = computed(() => user.value?.username === pageUsername.value)
 
+const listKey = ref(pageUsername.value)
+
 async function load() {
+  const username = pageUsername.value
+  listKey.value = username
   profile.value = null
   notFound.value = false
-  const { data, error } = await api.users({ username: pageUsername.value }).get()
+  const { data, error } = await api.users({ username }).get()
   if (error || !data) {
     notFound.value = true
   }
@@ -59,24 +64,11 @@ async function toggleFollow() {
   followLoading.value = false
 }
 
-function getViewport() {
-  return document.querySelector<HTMLElement>('[data-reka-scroll-area-viewport]')
-}
-
-let savedScrollTop = 0
-
-onDeactivated(() => {
-  savedScrollTop = getViewport()?.scrollTop ?? 0
-})
-
-onActivated(() => {
-  getViewport()!.scrollTop = savedScrollTop
-})
+useScrollRestore()
 
 onMounted(load)
-watch(pageUsername, () => {
-  savedScrollTop = 0
-  load()
+watch(pageUsername, (username) => {
+  username && username !== listKey.value && load()
 })
 </script>
 
@@ -106,7 +98,7 @@ watch(pageUsername, () => {
         {{ following ? t('userPage.unfollow') : t('userPage.follow') }}
       </Button>
     </div>
-    <PostList :key="pageUsername" :username="pageUsername" disable-user-link />
+    <PostList :key="listKey" :username="pageUsername" disable-user-link />
   </div>
 
   <div v-else-if="notFound">

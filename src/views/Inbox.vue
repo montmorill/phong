@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Check, Inbox } from 'lucide-vue-next'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -169,6 +169,8 @@ onMounted(async () => {
 
   result.sort((a, b) => (a.read === b.read ? 0 : a.read ? 1 : -1))
   displayItems.value = result
+  await nextTick()
+  scrollToSaved()
 })
 
 onUnmounted(() => {
@@ -183,9 +185,23 @@ function resolveAvatarUrl(avatar: string): string {
   return ''
 }
 
+function scrollToSaved() {
+  const scrollToId = sessionStorage.getItem('scrollToInbox')
+  if (!scrollToId)
+    return
+  sessionStorage.removeItem('scrollToInbox')
+  const el = document.getElementById(scrollToId)
+  const viewport = document.querySelector<HTMLElement>('[data-reka-scroll-area-viewport]')
+  if (el && viewport) {
+    const elTop = el.getBoundingClientRect().top - viewport.getBoundingClientRect().top + viewport.scrollTop
+    viewport.scrollTop = elTop - (viewport.clientHeight - el.offsetHeight) / 2
+  }
+}
+
 async function navigate(item: DisplayItem) {
   if (item.type !== 'like' && item.unreadIds.length)
     markItemRead(item)
+  sessionStorage.setItem('scrollToInbox', `notif-${item.ids[0]}`)
   router.push(`/post/${item.postId}`)
 }
 </script>
@@ -219,6 +235,7 @@ async function navigate(item: DisplayItem) {
     <div v-else class="space-y-1">
       <template v-for="item in displayItems" :key="item.ids[0]">
         <div
+          :id="`notif-${item.ids[0]}`"
           :ref="item.type === 'like' ? (el) => setLikeItemRef(item, el) : undefined"
           class="flex items-start gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
           :class="{ 'opacity-80': item.read }"
