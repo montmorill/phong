@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LogEntry } from './admin/AdminLog.vue'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { user } from '@/lib/api'
@@ -38,8 +38,22 @@ window.addEventListener('hashchange', () => {
 })
 
 // ── Backend logs (WebSocket) ──────────────────────────────────────────────────
+const LOG_PAGE_SIZE = 500
 const backendLogs = ref<LogEntry[]>([])
 const autoScroll = ref(true)
+const logPage = ref(0)
+const totalLogPages = computed(() => Math.max(1, Math.ceil(backendLogs.value.length / LOG_PAGE_SIZE)))
+const pagedLogs = computed(() => backendLogs.value.slice(logPage.value * LOG_PAGE_SIZE, (logPage.value + 1) * LOG_PAGE_SIZE))
+
+watch(() => backendLogs.value.length, () => {
+  if (autoScroll.value)
+    logPage.value = totalLogPages.value - 1
+})
+watch(autoScroll, (val) => {
+  if (val)
+    logPage.value = totalLogPages.value - 1
+})
+
 let ws: WebSocket | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -90,18 +104,23 @@ onUnmounted(() => {
         </Button>
       </div>
       <div class="ml-auto flex items-center gap-2">
-        <label v-if="tab === 'backend'" class="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-          <input v-model="autoScroll" type="checkbox" class="size-3">
-          自动滚动
-        </label>
-        <Button v-if="tab === 'backend'" variant="outline" size="sm" @click="backendLogs = []">
-          清空
-        </Button>
+        <template v-if="tab === 'backend'">
+          <label class="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+            <input v-model="autoScroll" type="checkbox" class="size-3">
+            自动滚动
+          </label>
+          <span class="text-xs text-muted-foreground">{{ logPage + 1 }}/{{ totalLogPages }}</span>
+          <Button variant="ghost" size="sm" :disabled="logPage === 0" @click="logPage--">‹</Button>
+          <Button variant="ghost" size="sm" :disabled="logPage >= totalLogPages - 1" @click="logPage++">›</Button>
+          <Button variant="outline" size="sm" @click="backendLogs = []">
+            清空
+          </Button>
+        </template>
       </div>
     </div>
 
     <!-- Content -->
-    <AdminLog v-show="tab === 'backend'" :logs="backendLogs" :auto-scroll="autoScroll" empty-text="等待日志…" />
+    <AdminLog v-show="tab === 'backend'" :logs="pagedLogs" :auto-scroll="autoScroll" empty-text="等待日志…" />
     <AdminDatabase v-show="tab === 'database'" />
   </div>
 </template>

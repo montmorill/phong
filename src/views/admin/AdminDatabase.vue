@@ -1,7 +1,7 @@
 <!-- eslint-disable no-alert -->
 <script setup lang="ts">
 import { ChevronDown } from 'lucide-vue-next'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -18,6 +18,21 @@ const loadingTable = ref(false)
 const editingIndex = ref<number | null>(null)
 const editDraft = ref<Row>({})
 const insertDraft = ref<Row | null>(null)
+
+const DB_PAGE_SIZE = 500
+const dbPage = ref(0)
+const totalDbPages = computed(() => Math.max(1, Math.ceil(tableRows.value.length / DB_PAGE_SIZE)))
+const pagedRows = computed(() => tableRows.value.slice(dbPage.value * DB_PAGE_SIZE, (dbPage.value + 1) * DB_PAGE_SIZE))
+
+watchEffect(() => {
+  if (dbPage.value >= totalDbPages.value)
+    dbPage.value = totalDbPages.value - 1
+})
+
+watch(dbPage, () => {
+  editingIndex.value = null
+  insertDraft.value = null
+})
 
 const tableColumns = computed(() =>
   tableRows.value[0]
@@ -45,6 +60,7 @@ async function loadTable() {
     return
   editingIndex.value = null
   insertDraft.value = null
+  dbPage.value = 0
   loadingTable.value = true
   const res = await fetch(`/api/admin/db/${selectedTable.value}`, { headers: authHeaders.value })
   if (res.ok) {
@@ -75,9 +91,10 @@ async function deleteRow(row: Row) {
 }
 
 // ── Edit ──────────────────────────────────────────────────────────────────────
-function startEdit(index: number) {
-  editingIndex.value = index
-  editDraft.value = { ...tableRows.value[index] }
+function startEdit(localIndex: number) {
+  const globalIndex = dbPage.value * DB_PAGE_SIZE + localIndex
+  editingIndex.value = globalIndex
+  editDraft.value = { ...tableRows.value[globalIndex] }
   insertDraft.value = null
 }
 
@@ -180,6 +197,11 @@ onMounted(loadTables)
         + 新增
       </Button>
       <span class="text-xs text-muted-foreground">{{ tableRows.length }} 条</span>
+      <template v-if="totalDbPages > 1">
+        <Button variant="ghost" size="sm" :disabled="dbPage === 0" @click="dbPage--">‹</Button>
+        <span class="text-xs text-muted-foreground">{{ dbPage + 1 }}/{{ totalDbPages }}</span>
+        <Button variant="ghost" size="sm" :disabled="dbPage >= totalDbPages - 1" @click="dbPage++">›</Button>
+      </template>
     </div>
 
     <ScrollArea class="flex-1">
@@ -228,12 +250,12 @@ onMounted(loadTables)
 
           <!-- Data rows -->
           <tr
-            v-for="(row, i) in tableRows"
+            v-for="(row, i) in pagedRows"
             :key="i"
             class="border-b hover:bg-muted/50"
-            :class="{ 'bg-muted/20': editingIndex === i }"
+            :class="{ 'bg-muted/20': editingIndex === dbPage * DB_PAGE_SIZE + i }"
           >
-            <template v-if="editingIndex === i">
+            <template v-if="editingIndex === dbPage * DB_PAGE_SIZE + i">
               <td v-for="col in tableColumns" :key="col" class="px-2 py-1 border-r">
                 <template v-if="!tablePks.includes(col)">
                   <input

@@ -13,12 +13,17 @@ export const logBuffer: LogEntry[] = []
 export const logListeners = new Set<(entry: LogEntry) => void>()
 
 const dataDir = resolve(import.meta.dir, '../../../data')
-const logFile = resolve(dataDir, 'server.log')
 
-// Load existing logs from file on startup
-if (existsSync(logFile)) {
+function getLogFile() {
+  const date = new Date().toISOString().slice(0, 10)
+  return resolve(dataDir, `server-${date}.log`)
+}
+
+// Load existing logs from today's file on startup
+const todayFile = getLogFile()
+if (existsSync(todayFile)) {
   try {
-    const lines = readFileSync(logFile, 'utf-8').split('\n').filter(Boolean)
+    const lines = readFileSync(todayFile, 'utf-8').split('\n').filter(Boolean)
     const entries = lines.map(line => JSON.parse(line))
     logBuffer.push(...entries.slice(-MAX_LOGS))
   }
@@ -44,7 +49,7 @@ function capture(level: LogEntry['level'], origin: (...args: unknown[]) => void)
     try {
       if (!existsSync(dataDir))
         mkdirSync(dataDir, { recursive: true })
-      appendFileSync(logFile, `${JSON.stringify(entry)}\n`)
+      appendFileSync(getLogFile(), `${JSON.stringify(entry)}\n`)
     }
     catch {}
   }
