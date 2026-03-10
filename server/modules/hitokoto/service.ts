@@ -24,7 +24,7 @@ export function random(username: string) {
   }
 }
 
-export function push(creator: string, content: string, from: string, fromWho: string): number {
+export function push(creator: string, content: string, from: string, fromWho?: string): number {
   const result = db
     .insert(hitokoto)
     .values({ creator, content, from, fromWho })

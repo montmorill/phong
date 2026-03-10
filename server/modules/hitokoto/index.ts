@@ -66,7 +66,7 @@ export default new Elysia()
     body: t.Object({
       content: t.String({ minLength: 1, maxLength: 1000 }),
       from: t.String({ maxLength: 100 }),
-      fromWho: t.String({ maxLength: 100 }),
+      fromWho: t.Optional(t.String({ maxLength: 100 })),
     }),
   })
   .delete('/hitokoto/:id', ({ params, status, username }) => {

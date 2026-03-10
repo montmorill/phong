@@ -73,7 +73,7 @@ export const hitokoto = sqliteTable('hitokoto', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   content: text('content').notNull(),
   from: text('from').notNull(),
-  fromWho: text('from_who').notNull(),
+  fromWho: text('from_who'),
   creator: text('creator').notNull().references(() => users.username),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 })
