@@ -259,11 +259,17 @@ onMounted(loadTables)
                 class="cursor-pointer block mx-auto"
               >
               <input
-                v-else
+                v-else-if="colType(col) === 'number' || hiddenCols.has(col)"
                 v-model="insertDraft[col] as string"
-                :type="colType(col) === 'number' ? 'number' : hiddenCols.has(col) ? 'password' : 'text'"
+                :type="colType(col) === 'number' ? 'number' : 'password'"
                 class="w-full bg-transparent border border-input rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring"
               >
+              <textarea
+                v-else
+                v-model="insertDraft[col] as string"
+                rows="2"
+                class="w-full bg-transparent border border-input rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring resize-y min-w-40"
+              />
             </td>
             <td class="px-3 py-1.5 flex gap-3 items-center">
               <button class="text-xs text-green-600 hover:text-green-800 font-medium" @click="saveInsert">
@@ -292,11 +298,17 @@ onMounted(loadTables)
                     class="cursor-pointer block mx-auto"
                   >
                   <input
-                    v-else
+                    v-else-if="colType(col) === 'number' || hiddenCols.has(col)"
                     v-model="editDraft[col] as string"
-                    :type="colType(col) === 'number' ? 'number' : hiddenCols.has(col) ? 'password' : 'text'"
+                    :type="colType(col) === 'number' ? 'number' : 'password'"
                     class="w-full bg-transparent border border-input rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring"
                   >
+                  <textarea
+                    v-else
+                    v-model="editDraft[col] as string"
+                    rows="2"
+                    class="w-full bg-transparent border border-input rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring resize-y min-w-40"
+                  />
                 </template>
                 <span v-else class="px-1 text-muted-foreground">{{ cellValue(row[col]) }}</span>
               </td>
