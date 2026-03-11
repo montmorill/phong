@@ -29,7 +29,7 @@ interface SystemEvent {
 }
 
 interface GameEvent {
-  event: 'invite' | 'invite_cancelled' | 'start' | 'end' | 'valid' | 'invalid' | 'vote' | 'vote_result'
+  event: 'invite' | 'invite_cancelled' | 'start' | 'end' | 'valid' | 'invalid' | 'vote' | 'vote_result' | 'duplicate'
   keyword?: string
   host?: string
   hostNickname?: string
@@ -184,6 +184,10 @@ const handlers = {
     activeVote.value = null
     clearVoteCountdown()
     entries.value.push({ kind: 'game', data: { event: 'vote_result', ...data } })
+    scrollToBottom()
+  },
+  game_duplicate(data) {
+    entries.value.push({ kind: 'game', data: { event: 'duplicate', username: data.username } })
     scrollToBottom()
   },
   game_invite(data) {
@@ -349,6 +353,8 @@ function gameEventText(entry: GameEvent): string {
         ? t('room.game.fhl.invalidGameOver', { username: entry.username, winner: entry.winner ?? '—', reason })
         : t('room.game.fhl.invalid', { username: entry.username, next: entry.nextPlayer, reason })
     }
+    case 'duplicate':
+      return t('room.game.fhl.duplicateEvent', { username: entry.username })
     case 'invite':
       return t('room.game.fhl.inviteEvent', { host: entry.hostNickname ?? entry.host, keyword: entry.keyword })
     case 'invite_cancelled':

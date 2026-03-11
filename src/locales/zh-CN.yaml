@@ -218,6 +218,7 @@ room:
         duplicate: 诗句重复
         invalidPoem: 非真实诗句
       surrender: 投降
+      duplicateEvent: '诗句已重复，请 {username} 继续作答'
       voteEvent: '正在投票：「{content}」是否为真实诗句？'
       voteBanner: '投票：「{content}」是否为真实诗句？（{username} 提交）'
       voteYes: 有效

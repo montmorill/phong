@@ -27,6 +27,7 @@ export interface ServerMessageMap {
   game_end: { reason: 'command' | 'winner', winner?: string }
   game_valid: { username: string, nextPlayer: string, turnDeadline: number }
   game_invalid: { username: string, nextPlayer: string | null, winner: string | null, turnDeadline: number | null, invalidReason?: 'timeout' | 'no_keyword' | 'duplicate' | 'invalid_poem', eliminated: boolean }
+  game_duplicate: { username: string }
   game_vote: { username: string, content: string, voters: string[], deadline: number }
   game_vote_result: { valid: boolean, yesCount: number, noCount: number }
 }

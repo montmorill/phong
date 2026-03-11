@@ -1,6 +1,6 @@
 /** 飞花令游戏逻辑（纯函数，无副作用） */
 
-/** 淘汰原因：timeout=超时未答（淘汰）, invalid_poem=非真实诗句（淘汰）; no_keyword/duplicate 仅跳过回合不淘汰 */
+/** 淘汰原因：timeout=超时未答（唯一淘汰条件）; duplicate/invalid_poem 仅跳过回合；no_keyword 由调用方过滤，不进入游戏逻辑 */
 export type InvalidReason = 'timeout' | 'no_keyword' | 'duplicate' | 'invalid_poem'
 
 export interface FeiHuaLingState {
@@ -20,7 +20,7 @@ export interface MoveResult {
 }
 
 /** 去除标点、空白后标准化，用于去重比较 */
-function normalize(text: string): string {
+export function normalize(text: string): string {
   return text.replace(/[\s\u3001-\u303F\uFF00-\uFFEF"',.!?;:[\]{}()\-—…·~]/g, '').toLowerCase()
 }
 
@@ -33,9 +33,9 @@ export function currentPlayer(state: FeiHuaLingState): string {
 }
 
 /**
- * 处理一次出牌。
- * - 不是当前玩家：原样返回（不影响游戏状态）
- * - 是当前玩家：校验诗句，通过则推进，失败则淘汰
+ * 处理一次出牌。调用方保证 content 要么为空（超时），要么含关键字且不重复。
+ * - 空字符串：超时，淘汰当前玩家
+ * - 含关键字且未重复：有效，推进回合
  */
 export function processMove(
   state: FeiHuaLingState,
@@ -48,54 +48,31 @@ export function processMove(
     return { result: { isCurrentPlayer: false, valid: true, nextPlayer: cp, winner: null }, newState: state }
   }
 
-  const isTimeout = !content.trim()
-  const hasKeyword = !isTimeout && content.includes(state.keyword)
-  const isDuplicate = hasKeyword && state.usedLines.has(normalize(content))
-  const valid = hasKeyword && !isDuplicate
-
-  const invalidReason: InvalidReason | undefined = isTimeout
-    ? 'timeout'
-    : !hasKeyword
-        ? 'no_keyword'
-        : isDuplicate
-          ? 'duplicate'
-          : undefined
-
-  if (valid) {
-    const newUsedLines = new Set(state.usedLines)
-    newUsedLines.add(normalize(content))
-    const newTurnIndex = (state.turnIndex + 1) % state.activePlayers.length
-    const newState: FeiHuaLingState = { ...state, turnIndex: newTurnIndex, usedLines: newUsedLines }
+  if (!content.trim()) {
+    // 超时：淘汰当前玩家
+    const newActivePlayers = state.activePlayers.filter(p => p !== username)
+    if (newActivePlayers.length <= 1) {
+      const winner = newActivePlayers[0] ?? null
+      return {
+        result: { isCurrentPlayer: true, valid: false, invalidReason: 'timeout', nextPlayer: null, winner },
+        newState: { ...state, activePlayers: newActivePlayers, turnIndex: 0 },
+      }
+    }
+    const newTurnIndex = state.turnIndex % newActivePlayers.length
+    const newState: FeiHuaLingState = { ...state, activePlayers: newActivePlayers, turnIndex: newTurnIndex }
     return {
-      result: { isCurrentPlayer: true, valid: true, nextPlayer: currentPlayer(newState), winner: null },
+      result: { isCurrentPlayer: true, valid: false, invalidReason: 'timeout', nextPlayer: currentPlayer(newState), winner: null },
       newState,
     }
   }
 
-  // 缺关键字或重复：仅跳过本轮，不淘汰玩家
-  if (invalidReason === 'no_keyword' || invalidReason === 'duplicate') {
-    const newTurnIndex = (state.turnIndex + 1) % state.activePlayers.length
-    const newState: FeiHuaLingState = { ...state, turnIndex: newTurnIndex }
-    return {
-      result: { isCurrentPlayer: true, valid: false, invalidReason, nextPlayer: currentPlayer(newState), winner: null },
-      newState,
-    }
-  }
-
-  // 超时：淘汰当前玩家
-  const newActivePlayers = state.activePlayers.filter(p => p !== username)
-  if (newActivePlayers.length <= 1) {
-    const winner = newActivePlayers[0] ?? null
-    return {
-      result: { isCurrentPlayer: true, valid: false, invalidReason, nextPlayer: null, winner },
-      newState: { ...state, activePlayers: newActivePlayers, turnIndex: 0 },
-    }
-  }
-
-  const newTurnIndex = state.turnIndex % newActivePlayers.length
-  const newState: FeiHuaLingState = { ...state, activePlayers: newActivePlayers, turnIndex: newTurnIndex }
+  // 有效
+  const newUsedLines = new Set(state.usedLines)
+  newUsedLines.add(normalize(content))
+  const newTurnIndex = (state.turnIndex + 1) % state.activePlayers.length
+  const newState: FeiHuaLingState = { ...state, turnIndex: newTurnIndex, usedLines: newUsedLines }
   return {
-    result: { isCurrentPlayer: true, valid: false, invalidReason, nextPlayer: currentPlayer(newState), winner: null },
+    result: { isCurrentPlayer: true, valid: true, nextPlayer: currentPlayer(newState), winner: null },
     newState,
   }
 }

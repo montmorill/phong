@@ -20,6 +20,7 @@ export async function validatePoem(content: string): Promise<boolean | null> {
     if (!res.ok)
       return null
     const html = await res.text()
+    console.log(html)
     const textareaTexts = [...html.matchAll(/<textarea[^>]*>([\s\S]*?)<\/textarea>/gi)].map(m => m[1] ?? '')
     return textareaTexts.some(text => text.includes(content))
   }
@@ -274,9 +275,6 @@ export default new Elysia({ prefix: '/rooms' })
 
       const game = RoomService.roomGames.get(roomId)
       if (game) {
-        // 先做本地校验（同步），再保存消息，再做远程诗句校验（异步）
-        let { result, newState } = FeiHuaLing.processMove(game, client.username, content)
-
         const { saved, userInfo } = await RoomService.saveMessage(roomId, client.username, content)
         RoomService.send(roomId, 'message', {
           id: saved.id,
@@ -286,6 +284,17 @@ export default new Elysia({ prefix: '/rooms' })
           content: saved.content,
           createdAt: saved.createdAt,
         })
+
+        // 不含关键字或重复诗句：仅作普通消息，当前玩家可继续作答
+        if (FeiHuaLing.currentPlayer(game) !== client.username || !content.includes(game.keyword)) {
+          return
+        }
+        if (game.usedLines.has(FeiHuaLing.normalize(content))) {
+          RoomService.send(roomId, 'game_duplicate', { username: client.username })
+          return
+        }
+
+        let { result, newState } = FeiHuaLing.processMove(game, client.username, content)
 
         if (result.isCurrentPlayer) {
           // 本地通过后，先用古文岛校验，无法判断时再发起投票
