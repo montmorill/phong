@@ -1,7 +1,7 @@
-import { asc, eq } from 'drizzle-orm'
+import type { RoomClient, ServerMessageMap } from './model'
+import { asc, desc, eq } from 'drizzle-orm'
 import { db, roomMessages, rooms, users } from '../../db'
 import * as FeiHuaLing from './games/feihualing'
-import type { RoomClient, ServerMessageMap } from './model'
 
 // ── In-memory room WS clients ─────────────────────────────────────────────────
 
@@ -172,8 +172,8 @@ export async function saveMessage(roomId: number, username: string, content: str
   return { saved: saved!, userInfo }
 }
 
-export function listMessages(roomId: number) {
-  return db
+export async function listMessages(roomId: number) {
+  const rows = await db
     .select({
       id: roomMessages.id,
       content: roomMessages.content,
@@ -185,6 +185,7 @@ export function listMessages(roomId: number) {
     .from(roomMessages)
     .innerJoin(users, eq(roomMessages.username, users.username))
     .where(eq(roomMessages.roomId, roomId))
-    .orderBy(asc(roomMessages.createdAt))
+    .orderBy(desc(roomMessages.createdAt))
     .limit(200)
+  return rows.reverse()
 }
