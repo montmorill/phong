@@ -183,6 +183,33 @@ room:
   messagePlaceholder: 输入消息…
   rename: 重命名
   renamePlaceholder: 房间名称
+  game:
+    fhl:
+      btnStart: 飞花令
+      btnEnd: 结束游戏
+      startPanelHint: 输入一个关键字，所有在线玩家将轮流吟出含该字的诗句
+      keywordPlaceholder: 关键字（如：花）
+      startConfirm: 开始
+      selectPlayers: 参与玩家
+      timeoutLabel: 每轮限时
+      banner: '飞花令 · 「{keyword}」'
+      currentTurn: '轮到 {player}'
+      yourTurnHint: '请吟含「{keyword}」的诗句'
+      waitingFor: '等待 {player} 出句…'
+      poemPlaceholder: '含「{keyword}」的诗句'
+      inviteEvent: '{host} 发起了飞花令「{keyword}」邀请'
+      inviteBanner: '{host} 邀请你参加飞花令「{keyword}」'
+      waitingInvites: 等待其他玩家响应…
+      accept: 接受
+      decline: 拒绝
+      cancelledEvent: 飞花令邀请已取消（参与玩家不足）
+      startHint: '输入 !飞花令 <字> 开始游戏，输入 !结束 结束游戏'
+      start: '飞花令开始！关键字「{keyword}」，参与者：{players}，先由 {player} 起句'
+      endCommand: 飞花令已结束
+      endWinner: '飞花令结束！{winner} 获胜！'
+      valid: '{username} ✓ → 下一位：{next}'
+      invalid: '{username} ✗ 出局 → 下一位：{next}'
+      invalidGameOver: '{username} ✗ 出局，游戏结束！{winner} 获胜！'
 error:
   invalidCredentials: 用户名或密码错误
   badRequest: 参数错误

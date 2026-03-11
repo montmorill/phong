@@ -5,5 +5,6 @@ export default antfu({
   rules: {
     'no-console': 'off',
     'vue/singleline-html-element-content-newline': 'off',
+    'style/operator-linebreak': ['error', 'before', { overrides: { '=': 'after' } }],
   },
 })

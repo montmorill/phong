@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { ServerMessageMap } from 'server/modules/room/model'
-import { ArrowLeft, Send } from 'lucide-vue-next'
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { ArrowLeft, Send, Swords, X } from 'lucide-vue-next'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -27,20 +28,108 @@ interface SystemEvent {
   username: string
 }
 
-type ChatEntry = { kind: 'message', data: Message } | { kind: 'system', data: SystemEvent }
+interface GameEvent {
+  event: 'invite' | 'invite_cancelled' | 'start' | 'end' | 'valid' | 'invalid'
+  keyword?: string
+  host?: string
+  hostNickname?: string
+  players?: string[]
+  currentPlayer?: string
+  username?: string
+  nextPlayer?: string | null
+  winner?: string | null
+  reason?: 'command' | 'winner' | 'no_players'
+}
+
+interface PendingInvite {
+  keyword: string
+  host: string
+  hostNickname: string
+  players: string[]
+  deadline: number
+}
+
+interface GameState {
+  keyword: string
+  activePlayers: string[]
+  currentPlayer: string
+  turnTimeoutMs: number
+}
+
+interface OnlineUser {
+  username: string
+  nickname: string
+  avatar: string
+}
+
+type ChatEntry =
+  | { kind: 'message', data: Message }
+  | { kind: 'system', data: SystemEvent }
+  | { kind: 'game', data: GameEvent }
 
 const { t } = useI18n()
 const entries = ref<ChatEntry[]>([])
 const draft = ref('')
+const poemDraft = ref('')
 const roomName = ref(t('room.unnamed', { id: props.id }))
-const onlineUsers = ref<Set<string>>(new Set())
+const onlineUsers = ref<Map<string, OnlineUser>>(new Map())
+const gameState = ref<GameState | null>(null)
+const pendingInvite = ref<PendingInvite | null>(null)
+const countdown = ref(0)
+const inviteCountdown = ref(0)
 const bottomEl = ref<HTMLElement | null>(null)
+const showStartPanel = ref(false)
+const keywordDraft = ref('')
+const timeoutSecs = ref(30)
+const selectedPlayers = ref<Set<string>>(new Set())
 let ws: WebSocket | null = null
+let pingInterval: ReturnType<typeof setInterval> | null = null
+let countdownInterval: ReturnType<typeof setInterval> | null = null
+let inviteCountdownInterval: ReturnType<typeof setInterval> | null = null
+
+watch(showStartPanel, (val) => {
+  if (val)
+    selectedPlayers.value = new Set(onlineUsers.value.keys())
+})
 
 function scrollToBottom() {
-  nextTick(() => {
-    bottomEl.value?.scrollIntoView({ behavior: 'instant' })
-  })
+  nextTick(() => bottomEl.value?.scrollIntoView({ behavior: 'instant' }))
+}
+
+function startCountdown(deadline: number) {
+  if (countdownInterval)
+    clearInterval(countdownInterval)
+  const tick = () => {
+    countdown.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+  }
+  tick()
+  countdownInterval = setInterval(tick, 200)
+}
+
+function clearCountdown() {
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+    countdownInterval = null
+  }
+  countdown.value = 0
+}
+
+function startInviteCountdown(deadline: number) {
+  if (inviteCountdownInterval)
+    clearInterval(inviteCountdownInterval)
+  const tick = () => {
+    inviteCountdown.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+  }
+  tick()
+  inviteCountdownInterval = setInterval(tick, 200)
+}
+
+function clearInviteCountdown() {
+  if (inviteCountdownInterval) {
+    clearInterval(inviteCountdownInterval)
+    inviteCountdownInterval = null
+  }
+  inviteCountdown.value = 0
 }
 
 const handlers = {
@@ -49,14 +138,65 @@ const handlers = {
     scrollToBottom()
   },
   join({ username }) {
-    onlineUsers.value = new Set([...onlineUsers.value, username])
     entries.value.push({ kind: 'system', data: { type: 'join', username } })
   },
   leave({ username }) {
-    const next = new Set(onlineUsers.value)
-    next.delete(username)
-    onlineUsers.value = next
     entries.value.push({ kind: 'system', data: { type: 'leave', username } })
+  },
+  pong() {},
+  game_invite(data) {
+    pendingInvite.value = data
+    startInviteCountdown(data.deadline)
+    entries.value.push({ kind: 'game', data: { event: 'invite', ...data } })
+    scrollToBottom()
+  },
+  game_invite_cancelled(data) {
+    pendingInvite.value = null
+    clearInviteCountdown()
+    entries.value.push({ kind: 'game', data: { event: 'invite_cancelled', ...data } })
+    scrollToBottom()
+  },
+  roster({ users }) {
+    const map = new Map<string, OnlineUser>()
+    for (const u of users)
+      map.set(u.username, u)
+    onlineUsers.value = map
+  },
+  game_start(data) {
+    pendingInvite.value = null
+    clearInviteCountdown()
+    gameState.value = { keyword: data.keyword, activePlayers: data.players, currentPlayer: data.currentPlayer, turnTimeoutMs: data.turnTimeoutMs }
+    startCountdown(data.turnDeadline)
+    poemDraft.value = ''
+    entries.value.push({ kind: 'game', data: { event: 'start', ...data } })
+    scrollToBottom()
+  },
+  game_end(data) {
+    gameState.value = null
+    clearCountdown()
+    entries.value.push({ kind: 'game', data: { event: 'end', ...data } })
+    scrollToBottom()
+  },
+  game_valid(data) {
+    if (gameState.value)
+      gameState.value.currentPlayer = data.nextPlayer
+    startCountdown(data.turnDeadline)
+    poemDraft.value = ''
+    entries.value.push({ kind: 'game', data: { event: 'valid', ...data } })
+    scrollToBottom()
+  },
+  game_invalid(data) {
+    if (gameState.value) {
+      gameState.value.activePlayers = gameState.value.activePlayers.filter(p => p !== data.username)
+      gameState.value.currentPlayer = data.nextPlayer ?? ''
+    }
+    if (data.turnDeadline !== null)
+      startCountdown(data.turnDeadline)
+    else
+      clearCountdown()
+    poemDraft.value = ''
+    entries.value.push({ kind: 'game', data: { event: 'invalid', ...data } })
+    scrollToBottom()
   },
 } satisfies {
   [K in keyof ServerMessageMap]: (msg: ServerMessageMap[K]) => void
@@ -65,7 +205,6 @@ const handlers = {
 async function loadRoom() {
   const token = localStorage.getItem('token') ?? ''
 
-  // Fetch room info (name) from room list
   const { data: roomList } = await api.rooms.get()
   if (roomList) {
     const room = roomList.find(r => r.id === props.id)
@@ -73,22 +212,26 @@ async function loadRoom() {
       roomName.value = room.name
   }
 
-  // Fetch message history
   const { data: msgs } = await api.rooms({ id: String(props.id) }).messages.get()
   if (msgs) {
     entries.value = (msgs as Message[]).map(m => ({ kind: 'message', data: m }))
     scrollToBottom()
   }
 
-  // Connect WebSocket
   const origin = window.location.origin.replace(/^http/, 'ws')
   ws = new WebSocket(`${origin}/api/rooms/ws/${props.id}?token=${encodeURIComponent(token)}`)
 
+  ws.onopen = () => {
+    pingInterval = setInterval(() => {
+      if (ws?.readyState === WebSocket.OPEN)
+        ws.send(JSON.stringify({ type: 'ping' }))
+    }, 30_000)
+  }
+
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data)
-    if (msg.type in handlers) {
+    if (msg.type in handlers)
       handlers[msg.type as keyof ServerMessageMap](msg)
-    }
   }
 
   ws.onclose = () => {
@@ -104,13 +247,82 @@ function send() {
   draft.value = ''
 }
 
+function submitPoem() {
+  const content = poemDraft.value.trim()
+  if (!content || !ws || ws.readyState !== WebSocket.OPEN)
+    return
+  if (gameState.value?.currentPlayer !== user.value?.username)
+    return
+  ws.send(JSON.stringify({ type: 'message', content }))
+  poemDraft.value = ''
+}
+
+function startGame() {
+  const kw = keywordDraft.value.trim()
+  const players = [...selectedPlayers.value]
+  if (!kw || players.length === 0 || !ws || ws.readyState !== WebSocket.OPEN)
+    return
+  ws.send(JSON.stringify({ type: 'game_start_fhl', keyword: kw, players, timeoutMs: timeoutSecs.value * 1000 }))
+  keywordDraft.value = ''
+  showStartPanel.value = false
+}
+
+function endGame() {
+  if (!ws || ws.readyState !== WebSocket.OPEN)
+    return
+  ws.send(JSON.stringify({ type: 'game_end_fhl' }))
+}
+
+function togglePlayer(username: string) {
+  const s = new Set(selectedPlayers.value)
+  s.has(username) ? s.delete(username) : s.add(username)
+  selectedPlayers.value = s
+}
+
 function formatTime(val: number | string | Date) {
   const d = val instanceof Date ? val : new Date(typeof val === 'number' ? val * 1000 : val)
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+function gameEventText(entry: GameEvent): string {
+  switch (entry.event) {
+    case 'start':
+      return t('room.game.fhl.start', {
+        keyword: entry.keyword,
+        players: entry.players?.join('、'),
+        player: entry.currentPlayer,
+      })
+    case 'end':
+      return entry.reason === 'winner' && entry.winner
+        ? t('room.game.fhl.endWinner', { winner: entry.winner })
+        : t('room.game.fhl.endCommand')
+    case 'valid':
+      return t('room.game.fhl.valid', { username: entry.username, next: entry.nextPlayer })
+    case 'invalid':
+      return entry.nextPlayer === null
+        ? t('room.game.fhl.invalidGameOver', { username: entry.username, winner: entry.winner ?? '—' })
+        : t('room.game.fhl.invalid', { username: entry.username, next: entry.nextPlayer })
+    case 'invite':
+      return t('room.game.fhl.inviteEvent', { host: entry.hostNickname ?? entry.host, keyword: entry.keyword })
+    case 'invite_cancelled':
+      return t('room.game.fhl.cancelledEvent')
+    default:
+      return ''
+  }
+}
+
+function respondInvite(accepted: boolean) {
+  if (!ws || ws.readyState !== WebSocket.OPEN)
+    return
+  ws.send(JSON.stringify({ type: 'game_invite_response', accepted }))
+}
+
 onMounted(loadRoom)
 onUnmounted(() => {
+  if (pingInterval)
+    clearInterval(pingInterval)
+  clearCountdown()
+  clearInviteCountdown()
   ws?.close()
   ws = null
 })
@@ -124,19 +336,173 @@ onUnmounted(() => {
         <ArrowLeft class="size-5" />
       </button>
       <span class="font-semibold text-lg flex-1">{{ roomName }}</span>
-      <span class="text-xs text-muted-foreground">{{ t('room.online', { count: onlineUsers.size }) }}</span>
+      <span class="text-xs text-muted-foreground mr-1">{{ t('room.online', { count: onlineUsers.size }) }}</span>
+      <Button
+        v-if="!gameState && !pendingInvite"
+        variant="ghost"
+        size="sm"
+        class="gap-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
+        @click="showStartPanel = !showStartPanel"
+      >
+        <Swords class="size-4" />
+        {{ t('room.game.fhl.btnStart') }}
+      </Button>
+      <Button
+        v-else
+        variant="ghost"
+        size="sm"
+        class="gap-1.5 text-muted-foreground hover:text-destructive"
+        @click="endGame"
+      >
+        <X class="size-4" />
+        {{ t('room.game.fhl.btnEnd') }}
+      </Button>
+    </div>
+
+    <!-- 飞花令邀请横幅 -->
+    <div v-if="pendingInvite && !gameState" class="px-4 py-3 border-b bg-amber-50 dark:bg-amber-950/30 shrink-0">
+      <div class="flex items-center justify-between gap-3">
+        <div class="text-sm text-amber-800 dark:text-amber-200 min-w-0">
+          <span v-if="pendingInvite.host === user?.username">
+            {{ t('room.game.fhl.waitingInvites') }}
+          </span>
+          <span v-else-if="pendingInvite.players.includes(user?.username ?? '')">
+            {{ t('room.game.fhl.inviteBanner', { host: pendingInvite.hostNickname, keyword: pendingInvite.keyword }) }}
+          </span>
+          <span v-else>
+            {{ t('room.game.fhl.inviteEvent', { host: pendingInvite.hostNickname, keyword: pendingInvite.keyword }) }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="tabular-nums font-mono text-xs font-semibold" :class="inviteCountdown <= 3 ? 'text-red-500' : 'text-amber-600 dark:text-amber-400'">
+            {{ inviteCountdown }}s
+          </span>
+          <template v-if="pendingInvite.host !== user?.username && pendingInvite.players.includes(user?.username ?? '')">
+            <Button size="sm" class="h-7 text-xs" @click="respondInvite(true)">
+              {{ t('room.game.fhl.accept') }}
+            </Button>
+            <Button size="sm" variant="outline" class="h-7 text-xs" @click="respondInvite(false)">
+              {{ t('room.game.fhl.decline') }}
+            </Button>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- 飞花令启动面板 -->
+    <div v-if="showStartPanel && !gameState && !pendingInvite" class="px-4 py-3 border-b bg-amber-50 dark:bg-amber-950/30 shrink-0 space-y-2.5">
+      <p class="text-xs text-amber-700 dark:text-amber-300">
+        {{ t('room.game.fhl.startPanelHint') }}
+      </p>
+      <div class="flex gap-2">
+        <Input
+          v-model="keywordDraft"
+          :placeholder="t('room.game.fhl.keywordPlaceholder')"
+          class="flex-1 h-8 text-sm"
+          maxlength="4"
+          @keydown.enter.prevent="startGame"
+        />
+        <Button size="sm" class="h-8" :disabled="!keywordDraft.trim() || selectedPlayers.size === 0" @click="startGame">
+          {{ t('room.game.fhl.startConfirm') }}
+        </Button>
+        <Button size="sm" variant="ghost" class="h-8" @click="showStartPanel = false">
+          {{ t('common.cancel') }}
+        </Button>
+      </div>
+      <!-- 每轮限时 -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-amber-700 dark:text-amber-300 shrink-0">{{ t('room.game.fhl.timeoutLabel') }}</span>
+        <div class="flex gap-1">
+          <button
+            v-for="s in [15, 30, 60]"
+            :key="s"
+            class="text-xs px-2 py-0.5 rounded-full border transition-colors"
+            :class="timeoutSecs === s
+              ? ['bg-amber-500', 'border-amber-500', 'text-white']
+              : ['border-amber-300', 'text-amber-700', 'dark:border-amber-600', 'dark:text-amber-400', 'hover:bg-amber-100', 'dark:hover:bg-amber-900/40']"
+            @click="timeoutSecs = s"
+          >
+            {{ s }}s
+          </button>
+        </div>
+        <input
+          v-model.number="timeoutSecs"
+          type="number"
+          min="5"
+          max="300"
+          class="w-16 h-7 rounded-md border border-input bg-background px-2 text-xs tabular-nums"
+        >
+      </div>
+      <div class="space-y-1">
+        <p class="text-xs font-medium text-amber-700 dark:text-amber-300">
+          {{ t('room.game.fhl.selectPlayers') }}
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <label
+            v-for="u in onlineUsers.values()"
+            :key="u.username"
+            class="flex items-center gap-1.5 cursor-pointer select-none rounded-full px-2.5 py-1 text-xs border transition-colors"
+            :class="selectedPlayers.has(u.username)
+              ? 'bg-amber-200 border-amber-400 text-amber-800 dark:bg-amber-800/50 dark:border-amber-600 dark:text-amber-200'
+              : 'bg-white border-border text-muted-foreground dark:bg-background'"
+          >
+            <input type="checkbox" class="hidden" :checked="selectedPlayers.has(u.username)" @change="togglePlayer(u.username)">
+            <UserAvatar :username="u.username" :nickname="u.nickname" :avatar="u.avatar" size="size-4" />
+            {{ u.nickname || u.username }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 飞花令游戏状态横幅 -->
+    <div v-if="gameState" class="px-4 pt-2 pb-1.5 border-b bg-amber-50 dark:bg-amber-950/30 shrink-0">
+      <div class="flex items-center justify-between text-sm mb-1.5">
+        <span class="font-medium text-amber-700 dark:text-amber-300">
+          {{ t('room.game.fhl.banner', { keyword: gameState.keyword }) }}
+        </span>
+        <div class="flex items-center gap-3">
+          <span
+            class="tabular-nums font-mono text-xs font-semibold"
+            :class="countdown <= 10 ? 'text-red-500 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'"
+          >
+            {{ countdown }}s
+          </span>
+          <span class="text-amber-600 dark:text-amber-400 text-xs">
+            {{ t('room.game.fhl.currentTurn', { player: gameState.currentPlayer }) }}
+          </span>
+        </div>
+      </div>
+      <!-- 进度条 -->
+      <div class="h-1 rounded-full bg-amber-200 dark:bg-amber-900 overflow-hidden">
+        <div
+          class="h-full rounded-full transition-none"
+          :class="countdown <= 10 ? 'bg-red-500' : 'bg-amber-500'"
+          :style="{ width: `${Math.min(100, countdown / (gameState.turnTimeoutMs / 1000) * 100)}%` }"
+        />
+      </div>
     </div>
 
     <!-- Messages -->
     <ScrollArea class="flex-1">
       <div class="px-4 py-3 space-y-3">
-        <div
-          v-for="(entry, i) in entries"
-          :key="i"
-        >
+        <div v-for="(entry, i) in entries" :key="i">
           <!-- System event -->
           <div v-if="entry.kind === 'system'" class="text-center text-xs text-muted-foreground py-1">
             {{ entry.data.username }} {{ entry.data.type === 'join' ? $t('room.joined') : $t('room.left') }}
+          </div>
+
+          <!-- Game event -->
+          <div
+            v-else-if="entry.kind === 'game'"
+            class="text-center text-xs py-1.5 px-3 rounded-full mx-auto w-fit"
+            :class="{
+              'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300': entry.data.event === 'start',
+              'bg-muted text-muted-foreground': entry.data.event === 'end',
+              'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300': entry.data.event === 'valid',
+              'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300': entry.data.event === 'invalid',
+            }"
+          >
+            {{ gameEventText(entry.data) }}
           </div>
 
           <!-- Chat message -->
@@ -157,7 +523,8 @@ onUnmounted(() => {
               :class="entry.data.username === user?.username ? 'items-end' : 'items-start'"
             >
               <span class="text-xs text-muted-foreground px-1">
-                {{ entry.data.nickname }}
+                <span class="font-medium text-foreground/80">{{ entry.data.nickname }}</span>
+                <!-- <span class="opacity-50">@{{ entry.data.username }}</span> -->
                 <span class="ml-1">{{ formatTime(entry.data.createdAt) }}</span>
               </span>
               <div
@@ -171,12 +538,49 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        <div ref="bottomEl" />
+        <div ref="bottomEl" class="-mt-2" />
       </div>
     </ScrollArea>
 
-    <!-- Input -->
-    <div class="border-t px-4 py-3 flex gap-2 items-end shrink-0">
+    <!-- 飞花令诗句输入区（游戏中替换普通输入） -->
+    <div
+      v-if="gameState"
+      class="border-t px-4 py-3 shrink-0 bg-amber-50/60 dark:bg-amber-950/20"
+    >
+      <div class="text-xs mb-2 text-amber-700 dark:text-amber-400">
+        <span v-if="gameState.currentPlayer === user?.username">
+          {{ t('room.game.fhl.yourTurnHint', { keyword: gameState.keyword }) }}
+        </span>
+        <span v-else class="text-muted-foreground">
+          {{ t('room.game.fhl.waitingFor', { player: gameState.currentPlayer }) }}
+        </span>
+      </div>
+      <div class="flex gap-2 items-end">
+        <Textarea
+          v-model="poemDraft"
+          :placeholder="gameState.currentPlayer === user?.username
+            ? t('room.game.fhl.poemPlaceholder', { keyword: gameState.keyword })
+            : '…'"
+          :disabled="gameState.currentPlayer !== user?.username"
+          rows="1"
+          class="flex-1 resize-none max-h-32 transition-colors"
+          :class="gameState.currentPlayer === user?.username
+            ? ['border-amber-400', 'focus-visible:ring-amber-400']
+            : ['opacity-50']"
+          @keydown.enter.exact.prevent="submitPoem"
+        />
+        <Button
+          size="sm"
+          :disabled="!poemDraft.trim() || gameState.currentPlayer !== user?.username"
+          @click="submitPoem"
+        >
+          <Send class="size-4" />
+        </Button>
+      </div>
+    </div>
+
+    <!-- 普通输入区（无游戏时） -->
+    <div v-else class="border-t px-4 py-3 flex gap-2 items-end shrink-0">
       <Textarea
         v-model="draft"
         :placeholder="$t('room.messagePlaceholder')"

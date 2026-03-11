@@ -5,6 +5,10 @@ import { t } from 'elysia'
 /** Messages sent from client → server */
 export interface ClientMessageMap {
   message: { content: string }
+  ping: Record<string, never>
+  game_start_fhl: { keyword: string, players: string[], timeoutMs: number }
+  game_end_fhl: Record<string, never>
+  game_invite_response: { accepted: boolean }
 }
 
 /** Messages sent from server → client */
@@ -12,12 +16,24 @@ export interface ServerMessageMap {
   message: { id: number, username: string, nickname: string, avatar: string, content: string, createdAt: Date }
   join: { username: string }
   leave: { username: string }
+  pong: Record<string, never>
+  roster: { users: Array<{ username: string, nickname: string, avatar: string }> }
+  // 飞花令游戏事件
+  game_invite: { keyword: string, host: string, hostNickname: string, players: string[], deadline: number }
+  game_invite_cancelled: { reason: 'no_players' }
+  game_start: { keyword: string, players: string[], currentPlayer: string, turnDeadline: number, turnTimeoutMs: number }
+  game_end: { reason: 'command' | 'winner', winner?: string }
+  game_valid: { username: string, nextPlayer: string, turnDeadline: number }
+  game_invalid: { username: string, nextPlayer: string | null, winner: string | null, turnDeadline: number | null }
 }
 
 export type ClientMsg = { [K in keyof ClientMessageMap]: { type: K } & ClientMessageMap[K] }[keyof ClientMessageMap]
 
 export interface RoomClient {
   username: string
+  nickname: string
+  avatar: string
+  lastPing: number
   send: (data: string) => void
 }
 
