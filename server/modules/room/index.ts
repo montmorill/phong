@@ -15,7 +15,7 @@ export async function validatePoem(content: string): Promise<boolean | null> {
   try {
     const res = await fetch(
       `https://www.guwendao.net/search.aspx?value=${encodeURIComponent(content)}`,
-      { signal: AbortSignal.timeout(5_000) },
+      { headers: { Cookie: Bun.env.GUWENDAO_COOKIE ?? '' } },
     )
     if (!res.ok)
       return null
