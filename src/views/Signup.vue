@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useFields } from '@/composables/useFields'
 import { useValidators } from '@/composables/useValidators'
-import { api, fetchUser, setToken } from '@/lib/api'
+import { api, fetchUser, TOKEN } from '@/lib/api'
 
 const { t, te } = useI18n()
 const router = useRouter()
@@ -40,7 +40,7 @@ async function handleSubmit(): Promise<string | void> {
     return key && te(key) ? t(key) : t('error.signupFailed')
   }
 
-  setToken(data.token)
+  TOKEN.value = data.token
   await fetchUser()
   router.push('/')
 }

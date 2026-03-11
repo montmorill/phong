@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UserProfile } from '@server/auth/model'
-import { Inbox, LogOut, MessageSquare, Settings, ShieldCheck, User } from 'lucide-vue-next'
+import { Inbox, LogOut, Settings, ShieldCheck, User } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import UserAvatar from '@/components/UserAvatar.vue'
