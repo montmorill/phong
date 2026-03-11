@@ -1,11 +1,11 @@
 import type { HTMLAttributes, InputAutoCompleteAttribute, InputTypeHTMLAttribute, MaybeRefOrGetter } from 'vue'
-import type { Awaitable } from '@/types'
+import gravatar from 'gravatar'
 import { computed, ref, toValue, watchEffect } from 'vue'
 import defaultAvatar from '@/assets/default-avatar.svg'
 
 export interface AvatarProvider {
   validate: (value: string) => boolean
-  resolve: (value: string) => Awaitable<string>
+  resolve: (value: string) => string
   type?: InputTypeHTMLAttribute
   autocomplete?: InputAutoCompleteAttribute
   inputmode?: HTMLAttributes['inputmode']
@@ -20,14 +20,13 @@ export const PROVIDERS = {
     inputmode: 'numeric',
   },
   gravatar: {
-    validate: (value: string) => value.includes('@') && value.includes('.'),
-    resolve: async (value: string) => {
-      if (!value.includes('@') || !value.includes('.'))
-        return ''
-      const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value.toLowerCase()))
-      const hash = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('')
-      return `https://www.gravatar.com/avatar/${hash}?s=640&d=404`
-    },
+    validate: (value: string) => /^[0-9a-f]{32}$/.test(value)
+      || (value.includes('@') && value.includes('.')),
+    resolve: (value: string) => gravatar.url(value, {
+      cdn: '//gravatar.loli.net',
+      s: '640',
+      d: '404',
+    }),
     type: 'email',
     inputmode: 'email',
     autocomplete: 'email',
@@ -69,8 +68,8 @@ export function useAvatar(avatar: MaybeRefOrGetter<string | undefined>) {
     avatarValue.value = value
   })
 
-  watchEffect(async () => {
-    avatarUrl.value = (await PROVIDERS[avatarProvider.value].resolve(avatarValue.value)) || defaultAvatar
+  watchEffect(() => {
+    avatarUrl.value = PROVIDERS[avatarProvider.value].resolve(avatarValue.value) || defaultAvatar
   })
 
   const avatarString = computed(() => `${avatarProvider.value}:${avatarValue.value}`)
