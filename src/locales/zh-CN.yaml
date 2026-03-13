@@ -207,7 +207,7 @@ room:
       decline: 拒绝
       declined: 已拒绝
       cancelledEvent: 飞花令邀请已取消（参与玩家不足）
-      startHint: '输入 !飞花令 <字> 开始游戏，输入 !结束 结束游戏'
+      startHint: 输入 !飞花令 <字> 开始游戏，输入 !结束 结束游戏
       start: '飞花令开始！关键字「{keyword}」，参与者：{players}，先由 {player} 起句'
       endCommand: 飞花令已结束
       endWinner: '飞花令结束！{winner} 获胜！'

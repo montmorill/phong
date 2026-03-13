@@ -11,7 +11,7 @@ const { hitokoto } = useHitokoto()
 <template>
   <div class="space-y-4 text-center my-auto px-8">
     <div v-if="user">
-      {{ t('home.welcome', user) }}
+      {{ t('home.welcome', { nickname: user.nickname }) }}
     </div>
     <div>
       <RouterLink to="/post" class="link">
