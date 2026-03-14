@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { bus } from '../events/bus'
-import { uploadAvatar } from '../gravatar/service'
 import { getFollowerCount, getFollowingCount, isFollowing } from '../follow/service'
+import { uploadAvatar } from '../gravatar/service'
 import { jwtPlugin } from '../jwt'
 import { optionalAuth, requireAuth } from './guard'
 import { loginBody, signUpBody, updateProfileBody } from './model'

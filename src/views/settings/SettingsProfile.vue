@@ -15,19 +15,31 @@ import { api, fetchUser, TOKEN, user } from '@/lib/api'
 const { data: gravatarStatus } = await api.me.gravatar.get()
 const gravatarConnected = ref(gravatarStatus?.connected ?? false)
 const gravatarAuthorizeUrl = ref(gravatarStatus?.authorizeUrl ?? '')
+const gravatarError = ref('')
 
 async function connectGravatar() {
+  gravatarError.value = ''
   const popup = window.open(gravatarAuthorizeUrl.value, 'gravatar-oauth', 'width=600,height=700')
-  const code = await new Promise<string>((resolve) => {
+  const code = await new Promise<string | null>((resolve) => {
+    const timer = setTimeout(() => resolve(null), 5 * 60 * 1000)
     window.addEventListener('message', function handler(e) {
       if (e.origin === location.origin && e.data?.type === 'gravatar:code') {
+        clearTimeout(timer)
         window.removeEventListener('message', handler)
         resolve(e.data.code)
       }
     })
   })
   popup?.close()
-  await api.me.gravatar.connect.post({ code })
+  if (!code) {
+    gravatarError.value = 'Authorization cancelled or timed out'
+    return
+  }
+  const { error } = await api.me.gravatar.connect.post({ code })
+  if (error) {
+    gravatarError.value = (error.value as any)?.message ?? 'Failed to connect Gravatar'
+    return
+  }
   gravatarConnected.value = true
 }
 
@@ -92,7 +104,7 @@ async function saveProfile() {
 <template>
   <div class="space-y-4">
     <div class="flex justify-center mb-2">
-      <button type="button" class="relative group" @click="fileInput?.click()">
+      <button type="button" class="relative group leading-0" @click="fileInput?.click()">
         <Avatar class="size-20 border">
           <AvatarImage :src="avatarUrl" :alt="user?.username" />
           <AvatarFallback>{{ user?.nickname?.slice(0, 2) }}</AvatarFallback>
@@ -156,6 +168,7 @@ async function saveProfile() {
     >
       {{ gravatarConnected ? $t('profile.gravatarConnected') : $t('profile.connectGravatar') }}
     </Button>
+    <p v-if="gravatarError" class="text-sm text-destructive">{{ gravatarError }}</p>
 
     <Button
       class="w-full"
