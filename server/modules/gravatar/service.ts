@@ -159,6 +159,54 @@ export async function registerForUser(username: string) {
   }
 }
 
+/** 用授权码换取 token 并绑定账户 */
+export async function connectWithCode(username: string, code: string) {
+  const redirectUri = `${Bun.env.SITE_ORIGIN}/gravatar/callback`
+  const res = await fetch('https://public-api.wordpress.com/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: WP_CLIENT_ID,
+      client_secret: WP_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`[gravatar] token exchange failed: ${body}`)
+  }
+  const data = await res.json() as { access_token: string, refresh_token: string, expires_in: number }
+  const expiresAt = new Date(Date.now() + data.expires_in * 1000)
+
+  await db.insert(gravatarAccounts)
+    .values({
+      username,
+      wpPassword: '',
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      tokenExpiresAt: expiresAt,
+    })
+    .onConflictDoUpdate({
+      target: gravatarAccounts.username,
+      set: {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        tokenExpiresAt: expiresAt,
+      },
+    })
+}
+
+/** 检查用户是否已连接 Gravatar */
+export function isConnected(username: string) {
+  const account = db.select({ username: gravatarAccounts.username })
+    .from(gravatarAccounts)
+    .where(eq(gravatarAccounts.username, username))
+    .get()
+  return !!account
+}
+
 /** 上传头像到 Gravatar */
 export async function uploadAvatar(username: string, imageBuffer: ArrayBuffer, mimeType: string) {
   const token = await getValidToken(username)

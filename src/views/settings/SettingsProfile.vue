@@ -12,6 +12,25 @@ import { useFields } from '@/composables/useFields'
 import { useValidators } from '@/composables/useValidators'
 import { api, fetchUser, TOKEN, user } from '@/lib/api'
 
+const { data: gravatarStatus } = await api.me.gravatar.get()
+const gravatarConnected = ref(gravatarStatus?.connected ?? false)
+const gravatarAuthorizeUrl = ref(gravatarStatus?.authorizeUrl ?? '')
+
+async function connectGravatar() {
+  const popup = window.open(gravatarAuthorizeUrl.value, 'gravatar-oauth', 'width=600,height=700')
+  const code = await new Promise<string>((resolve) => {
+    window.addEventListener('message', function handler(e) {
+      if (e.origin === location.origin && e.data?.type === 'gravatar:code') {
+        window.removeEventListener('message', handler)
+        resolve(e.data.code)
+      }
+    })
+  })
+  popup?.close()
+  await api.me.gravatar.connect.post({ code })
+  gravatarConnected.value = true
+}
+
 const { t } = useI18n()
 
 const { nickname } = useValidators()
@@ -128,6 +147,15 @@ async function saveProfile() {
         </DropdownMenu>
       </template>
     </Input>
+
+    <Button
+      variant="outline"
+      class="w-full"
+      :disabled="gravatarConnected"
+      @click="connectGravatar"
+    >
+      {{ gravatarConnected ? $t('profile.gravatarConnected') : $t('profile.connectGravatar') }}
+    </Button>
 
     <Button
       class="w-full"

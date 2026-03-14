@@ -31,6 +31,8 @@ profile:
   saving: 保存中…
   saved: 已保存
   uploadAvatar: 上传头像
+  connectGravatar: 连接 Gravatar
+  gravatarConnected: 已连接 Gravatar
 settings:
   title: 设置
   tabs:

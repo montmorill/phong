@@ -2,7 +2,6 @@ import { cors } from '@elysiajs/cors'
 import { Elysia } from 'elysia'
 import { mailServer } from './modules/mail/server'
 import './modules/admin/logger'
-import './modules/gravatar'
 
 const app = new Elysia({ prefix: '/api' })
   .use(cors())
@@ -16,6 +15,7 @@ const app = new Elysia({ prefix: '/api' })
   .use(import('./modules/room'))
   .use(import('./modules/admin'))
   .use(import('./modules/mail'))
+  .use(import('./modules/gravatar'))
   .listen(3000)
 
 export type App = typeof app

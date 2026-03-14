@@ -1,10 +1,28 @@
-import type { AppEvent } from '../events/bus'
-import { bus } from '../events/bus'
-import { registerForUser } from './service'
+import { Elysia, t } from 'elysia'
+import { adminAuth } from '../admin/guard'
+import { requireAuth } from '../auth/guard'
+import { connectWithCode, isConnected, registerForUser } from './service'
 
-bus.on('event', (event: AppEvent) => {
-  if (event.topic === 'user.registered') {
-    // 后台异步执行，不阻塞注册响应
-    registerForUser(event.payload.username)
-  }
-})
+const REDIRECT_URI = `${Bun.env.SITE_ORIGIN}/gravatar/callback`
+
+export default new Elysia()
+  .use(requireAuth)
+  .get('/me/gravatar', ({ username }) => ({
+    connected: isConnected(username),
+    authorizeUrl: `https://public-api.wordpress.com/oauth2/authorize?client_id=${Bun.env.WP_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=global`,
+  }))
+  .post('/me/gravatar/connect', async ({ username, body, status }) => {
+    try {
+      await connectWithCode(username, body.code)
+      return {}
+    }
+    catch (err) {
+      return status(400, { message: String(err) })
+    }
+  }, {
+    body: t.Object({ code: t.String() }),
+  })
+  .use(adminAuth)
+  .get('/gravatar/register/:username', ({ params: { username } }) => {
+    registerForUser(username)
+  })
