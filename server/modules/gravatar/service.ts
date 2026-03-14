@@ -162,6 +162,7 @@ export async function registerForUser(username: string) {
 /** 用授权码换取 token 并绑定账户 */
 export async function connectWithCode(username: string, code: string) {
   const redirectUri = `${Bun.env.SITE_ORIGIN}/gravatar/callback`
+  console.log('[gravatar] token exchange: client_id=%s redirect_uri=%s code_len=%d', WP_CLIENT_ID, redirectUri, code.length)
   const res = await fetch('https://public-api.wordpress.com/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
