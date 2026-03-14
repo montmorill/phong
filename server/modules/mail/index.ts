@@ -1,7 +1,6 @@
 import { and, desc, eq } from 'drizzle-orm'
 import { Elysia } from 'elysia'
-import { db } from '../../db'
-import { emails } from '../../schema'
+import { db, emails } from 'server/database'
 import { requireAuth } from '../auth/guard'
 
 export default new Elysia()

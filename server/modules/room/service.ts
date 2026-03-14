@@ -1,6 +1,6 @@
 import type { RoomClient, ServerMessageMap } from './model'
 import { asc, desc, eq } from 'drizzle-orm'
-import { db, roomMessages, rooms, users } from '../../db'
+import { db, roomMessages, rooms, users } from 'server/database'
 import * as FeiHuaLing from './games/feihualing'
 
 // ── In-memory room WS clients ─────────────────────────────────────────────────

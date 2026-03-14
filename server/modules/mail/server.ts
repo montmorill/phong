@@ -1,9 +1,8 @@
 import type { Awaitable } from '@/types'
 import { eq } from 'drizzle-orm'
 import { simpleParser } from 'mailparser'
+import { db, emails, users } from 'server/database'
 import { SMTPServer } from 'smtp-server'
-import { db } from '../../db'
-import { emails, users } from '../../schema'
 
 type EmailHandler = (data: {
   toAddress: string
