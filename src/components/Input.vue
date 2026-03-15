@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FieldValidator } from '@/composables/useValidators'
-import { watch } from 'vue'
+import { useSlots, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -18,9 +18,11 @@ const { validate } = defineProps<{
 
 const emit = defineEmits<{
   'update:error': [string]
-  focusin: [FocusEvent]
-  focusout: [FocusEvent]
+  'focusin': [FocusEvent]
+  'focusout': [FocusEvent]
 }>()
+
+const slots = useSlots()
 const modelValue = defineModel<string>('value')
 watch(() => modelValue.value, (newValue) => {
   emit('update:error', validate?.(newValue || '') || '')
@@ -52,11 +54,17 @@ watch(() => modelValue.value, (newValue) => {
         v-bind="$attrs"
         spellcheck="false"
         :required="!optional"
-        :class="error && 'border-destructive'"
+        :class="[
+          error && 'border-destructive',
+          slots.append && 'pr-11',
+        ]"
         :disabled="disabled"
         :model-value="modelValue"
         @update:model-value="modelValue = $event as string"
       />
+      <div v-if="slots.append" class="absolute inset-y-0 right-3 flex items-center">
+        <slot name="append" />
+      </div>
     </div>
   </div>
 </template>

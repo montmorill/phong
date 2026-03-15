@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Eye, EyeOff } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -14,6 +15,8 @@ const { t, te } = useI18n()
 const router = useRouter()
 const { username, nickname, password } = useValidators()
 const activeHintField = ref<string | null>(null)
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const { fields, filled, hasErrors } = useFields({
   username: { type: 'text', autocomplete: 'username', validate: username },
@@ -66,9 +69,27 @@ async function handleSubmit(): Promise<string | void> {
       :hint="getFieldHint(String(key))"
       :hint-visible="activeHintField === String(key)"
       :placeholder="t(`field.${key}.placeholder`)"
+      :type="key === 'password' ? (showPassword ? 'text' : 'password') : key === 'confirmPassword' ? (showConfirmPassword ? 'text' : 'password') : field.type"
       @focusin="activeHintField = String(key)"
       @focusout="activeHintField = activeHintField === String(key) ? null : activeHintField"
-    />
+    >
+      <template v-if="key === 'password' || key === 'confirmPassword'" #append>
+        <button
+          type="button"
+          class="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          :aria-label="key === 'password'
+            ? (showPassword ? t('field.password.hide') : t('field.password.show'))
+            : (showConfirmPassword ? t('field.password.hide') : t('field.password.show'))"
+          :title="key === 'password'
+            ? (showPassword ? t('field.password.hide') : t('field.password.show'))
+            : (showConfirmPassword ? t('field.password.hide') : t('field.password.show'))"
+          @click="key === 'password' ? (showPassword = !showPassword) : (showConfirmPassword = !showConfirmPassword)"
+        >
+          <Eye v-if="key === 'password' ? showPassword : showConfirmPassword" class="size-4" />
+          <EyeOff v-else class="size-4" />
+        </button>
+      </template>
+    </Input>
 
     <template #submit="{ loading }">
       <Button type="submit" class="w-full" :disabled="!filled || hasErrors || loading">

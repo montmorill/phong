@@ -106,6 +106,8 @@ field:
   password:
     label: 密码
     placeholder: 请输入密码
+    show: 显示密码
+    hide: 隐藏密码
   confirmPassword:
     label: 确认密码
     placeholder: 再次输入密码
