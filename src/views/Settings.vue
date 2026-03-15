@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Bell, Languages, Link, Quote, User } from 'lucide-vue-next'
+import { Bell, Link, MonitorCog, Quote, User } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Separator } from '@/components/ui/separator'
@@ -44,7 +44,7 @@ function setTab(tab: Tab) {
           @click="setTab(tab)"
         >
           <User v-if="tab === 'profile'" class="size-4 shrink-0" />
-          <Languages v-else-if="tab === 'appearance'" class="size-4 shrink-0" />
+          <MonitorCog v-else-if="tab === 'appearance'" class="size-4 shrink-0" />
           <Link v-else-if="tab === 'bind'" class="size-4 shrink-0" />
           <Bell v-else-if="tab === 'notifications'" class="size-4 shrink-0" />
           <Quote v-else-if="tab === 'hitokoto'" class="size-4 shrink-0" />
