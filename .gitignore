@@ -28,3 +28,6 @@ data
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Environment
+.env
