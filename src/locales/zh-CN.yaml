@@ -40,10 +40,23 @@ settings:
   title: 设置
   tabs:
     profile: 个人资料
-    theme: 主题
+    appearance: 外观
     bind: 平台绑定
     notifications: 通知设置
     hitokoto: 一言来源
+  appearanceHint: 选择平台的显示外观与使用语言。
+  appearance:
+    themeTitle: 外观主题
+    languageTitle: 界面语言
+    themeDescription: 选择界面的明暗模式与整体显示风格。
+    languageDescription: 选择平台界面使用的语言。
+  theme:
+    light: 亮色
+    dark: 暗色
+    system: 跟随系统
+  language:
+    zh-CN: 简体中文
+    en-US: English
   hitokoto:
     local: 本站投稿
     types:
@@ -59,11 +72,6 @@ settings:
       j: 网易云
       k: 哲学
       l: 抖机灵
-  themeHint: 选择界面显示的外观主题。
-  theme:
-    light: 亮色
-    dark: 暗色
-    system: 跟随系统
   notifications:
     subscribe: 订阅设置
     type:

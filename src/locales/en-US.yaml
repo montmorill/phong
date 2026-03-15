@@ -1,0 +1,257 @@
+brand:
+  name: Pinghong
+home:
+  joinGroup: Click the link to join the group chat {group}
+  notLoggedIn: You are not logged in yet. Please {login} or {signup}
+  loginLink: Log in
+  signupLink: Sign up
+  welcome: Welcome back, {nickname}.
+  joinGroupName: '[Pinghong Work Group]'
+nav:
+  profile: Profile
+  inbox: Inbox
+  settings: Settings
+  logout: Log out
+  post: Posts
+  rooms: Chat Rooms
+login:
+  title: Log In
+  submit: Log In
+  submitting: Logging in...
+  noAccount: Don't have an account?
+  signupLink: Sign up now
+signup:
+  title: Sign Up
+  submit: Sign Up
+  submitting: Signing up...
+  usernameHint: Your username identifies the account and cannot be changed after registration.
+  nicknameHint: Your nickname is used for display and can be changed later in your profile or settings.
+  hasAccount: Already have an account?
+  loginLink: Log in now
+profile:
+  title: Profile
+  save: Save
+  saving: Saving...
+  saved: Saved
+  uploadAvatar: Upload Avatar
+  connectGravatar: Connect Gravatar
+  gravatarConnected: Gravatar connected
+settings:
+  title: Settings
+  tabs:
+    profile: Profile
+    appearance: Appearance
+    bind: Account Linking
+    notifications: Notifications
+    hitokoto: Hitokoto Source
+  appearanceHint: Choose how the site looks and which language it uses.
+  appearance:
+    themeTitle: Theme
+    languageTitle: Language
+    themeDescription: Choose the visual theme used by the interface.
+    languageDescription: Choose the language used across the interface.
+  theme:
+    light: Light
+    dark: Dark
+    system: Follow system
+  language:
+    zh-CN: 简体中文
+    en-US: English
+  hitokoto:
+    local: Local submissions
+    types:
+      a: Animation
+      b: Comics
+      c: Games
+      d: Literature
+      e: Original
+      f: Internet
+      g: Other
+      h: Film and TV
+      i: Poetry
+      j: NetEase Music
+      k: Philosophy
+      l: Humor
+  notifications:
+    subscribe: Subscription settings
+    type:
+      like:
+        label: Likes
+        desc: Notify you when someone likes your post
+      reply:
+        label: Replies
+        desc: Notify you when someone replies to your post
+      post:
+        label: New posts from followed users
+        desc: Notify you when someone you follow publishes a new post
+    inbox: Inbox
+    markAllRead: Mark all as read
+    markAllReadDone: Marked all as read
+    markAllReadHint: Mark all unread notifications as read.
+validation:
+  required: '{label} cannot be empty'
+  minLength: '{label} must be at least {min} characters'
+  maxLength: '{label} must be at most {max} characters'
+  pattern: '{label} has an invalid format'
+field:
+  username:
+    label: Username
+    placeholder: Enter your username
+    pattern: Username can only contain letters, numbers or hyphens
+  nickname:
+    label: Nickname
+    placeholder: Enter your nickname
+  avatar:
+    label: Avatar
+    qq:
+      label: QQ
+      placeholder: Enter your QQ number
+      pattern: Invalid QQ number format (5-12 digits)
+    gravatar:
+      label: Gravatar
+      placeholder: Enter your email address
+      pattern: Invalid email format
+  password:
+    label: Password
+    placeholder: Enter your password
+    show: Show password
+    hide: Hide password
+  confirmPassword:
+    label: Confirm Password
+    placeholder: Enter your password again
+    mismatch: The two passwords do not match
+  post:
+    title:
+      label: Title
+      placeholder: Title (optional)
+    content:
+      label: Content
+common:
+  cancel: Cancel
+  delete: Delete
+  back: Back
+post:
+  title: Posts
+  empty: No posts yet. Be the first to write one.
+  loginRequired: You need to {login} before posting
+  deleteConfirm: Delete Post
+  deleteDescription: This action cannot be undone. The post will be permanently deleted.
+  replyTo: 'Reply to: {nickname}'
+  quote: '{nickname}: {content}'
+  quoteNameOnly: '{nickname}'
+  compose:
+    placeholder: Write here...
+    submit: Post
+  comments: Comments
+  readMore: Read more
+  notFound: Post not found
+  replyCount: '{n} replies'
+  reply:
+    placeholder: Write your reply...
+    submit: Reply
+  errors:
+    postFailed: Failed to publish. Please try again later.
+time:
+  justNow: just now
+  minutesAgo: '{n} minutes ago'
+  hoursAgo: '{n} hours ago'
+inbox:
+  title: Inbox
+  empty: No notifications yet
+  read: Read
+  like: liked your post
+  likeActorsSep: ', '
+  likeActors: ' and {count} others'
+  reply: replied to your post
+  post: published a new post
+userPage:
+  notFound: User not found
+  follow: Follow
+  unfollow: Unfollow
+  following: Following
+  followers: Followers
+bind:
+  title: Account Linking
+  qq: QQ
+  bound: Linked
+  currentQQ: 'Currently linked QQ:'
+  unbind: Unlink
+  unbindFailed: Failed to unlink. Please try again later.
+  intro: Click the button below to get a verification code, then send it to the QQ bot to complete account linking.
+  getCode: Get code
+  requestFailed: Failed to get code. Please try again later.
+  codeHint: 'Send the following verification code to the QQ bot:'
+  waitingHint: The code is valid for 10 minutes
+  polling: Waiting for linking...
+  cancel: Cancel
+room:
+  title: Chat Rooms
+  createPlaceholder: New room name
+  create: Create
+  loading: Loading...
+  empty: No chat rooms yet. Create the first one.
+  deleteConfirm: 'Delete room "{name}"'
+  deleteDescription: This action cannot be undone. The room and all messages will be permanently deleted.
+  joined: joined the room
+  left: left the room
+  online: '{count} online'
+  observers: '{count} observing'
+  unnamed: 'Room #{id}'
+  messagePlaceholder: Type a message...
+  loginRequired: You need to {login} before sending messages
+  rename: Rename
+  renamePlaceholder: Room name
+  game:
+    fhl:
+      btnStart: Feihualing
+      btnEnd: End Game
+      startPanelHint: Enter a keyword and all online players will take turns reciting lines of poetry containing it
+      keywordPlaceholder: 'Keyword (for example: flower)'
+      startConfirm: Start
+      selectPlayers: Players
+      timeoutLabel: Time per turn
+      banner: 'Feihualing · "{keyword}"'
+      currentTurn: '{player}''s turn'
+      yourTurnHint: Please recite a line containing "{keyword}"
+      waitingFor: Waiting for {player}...
+      poemPlaceholder: A line containing "{keyword}"
+      inviteEvent: '{host} started a Feihualing invitation for "{keyword}"'
+      inviteBanner: '{host} invited you to Feihualing "{keyword}"'
+      waitingInvites: Waiting for other players to respond...
+      accept: Accept
+      accepted: Accepted, waiting for others...
+      decline: Decline
+      declined: Declined
+      cancelledEvent: Feihualing invitation canceled (not enough players)
+      startHint: Type !飞花令 <word> to start, and !结束 to end the game
+      start: 'Feihualing started. Keyword "{keyword}", players: {players}, {player} goes first'
+      endCommand: Feihualing has ended
+      endWinner: 'Feihualing ended. {winner} wins!'
+      valid: '{username} ✓ -> next: {next}'
+      invalid: '{username} ✗ ({reason}) eliminated -> next: {next}'
+      invalidGameOver: '{username} ✗ ({reason}) eliminated, game over. {winner} wins!'
+      reason:
+        timeout: Timeout
+        noKeyword: Missing keyword
+        duplicate: Duplicate line
+        invalidPoem: Not a real poem line
+      surrender: Surrender
+      duplicateEvent: The line was already used. Please continue, {username}
+      voteEvent: 'Voting: is "{content}" a real poem line?'
+      voteBanner: 'Vote: is "{content}" a real poem line? ({username} submitted it)'
+      voteYes: Valid
+      voteYesed: Marked valid, waiting for others...
+      voteNo: Invalid
+      voteNoed: Marked invalid, waiting for others...
+      voteValid: 'Vote passed ({yes} valid / {no} invalid)'
+      voteInvalid: 'Vote rejected ({yes} valid / {no} invalid)'
+error:
+  invalidCredentials: Incorrect username or password
+  badRequest: Invalid request
+  usernameExists: Username already exists
+  unauthorized: Unauthorized
+  tokenExpired: Token is invalid or expired
+  userNotFound: User not found
+  loginFailed: Login failed. Please try again later.
+  signupFailed: Signup failed. Please try again later.
+  networkError: Network error. Please try again later.

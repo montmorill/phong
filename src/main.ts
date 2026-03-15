@@ -3,11 +3,14 @@ import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import { i18n } from './i18n'
+import { applyTheme, getInitialTheme } from './lib/appearance'
 import { fetchUnreadCount, fetchUser, user } from './lib/api'
 import './style.css'
 
 if ('scrollRestoration' in history)
   history.scrollRestoration = 'manual'
+
+applyTheme(getInitialTheme())
 
 const router = createRouter({
   history: createWebHistory(),
