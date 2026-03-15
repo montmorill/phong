@@ -5,9 +5,9 @@
   "private": true,
   "packageManager": "bun@1.3.10",
   "scripts": {
-    "dev": "concurrently -n server,vite -c magenta,cyan \"bun run --cwd server dev\" \"vite\"",
+    "dev": "concurrently -n server,vite -c magenta,cyan \"npm run --prefix server dev\" \"vite\"",
     "dev:vite": "vite",
-    "dev:server": "bun run --cwd server dev",
+    "dev:server": "npm run --prefix server dev",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
