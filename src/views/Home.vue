@@ -10,21 +10,23 @@ const { hitokoto } = useHitokoto()
 
 <template>
   <div class="space-y-4 text-center my-auto p-8">
-    <template v-if="user">
-      {{ t('home.welcome', { nickname: user.nickname }) }}
-    </template>
-    <Translation v-else keypath="home.notLoggedIn" tag="p">
-      <template #login>
-        <RouterLink to="/login" class="link">
-          {{ t('home.loginLink') }}
-        </RouterLink>
+    <p>
+      <template v-if="user">
+        {{ t('home.welcome', { nickname: user.nickname }) }}
       </template>
-      <template #signup>
-        <RouterLink to="/signup" class="link">
-          {{ t('home.signupLink') }}
-        </RouterLink>
-      </template>
-    </Translation>
+      <Translation v-else keypath="home.notLoggedIn" tag="p">
+        <template #login>
+          <RouterLink to="/login" class="link">
+            {{ t('home.loginLink') }}
+          </RouterLink>
+        </template>
+        <template #signup>
+          <RouterLink to="/signup" class="link">
+            {{ t('home.signupLink') }}
+          </RouterLink>
+        </template>
+      </Translation>
+    </p>
     <div class="space-x-2">
       <RouterLink to="/post" class="link">
         {{ t('nav.post') }}
@@ -37,13 +39,15 @@ const { hitokoto } = useHitokoto()
       </RouterLink>
     </div>
     <Separator />
-    <Translation keypath="home.joinGroup" tag="p">
-      <template #group>
-        <a href="https://qm.qq.com/q/DNU3nJxnwY" target="_blank" class="link whitespace-nowrap">
-          {{ t('home.joinGroupName') }}
-        </a>
-      </template>
-    </Translation>
+    <p>
+      <Translation keypath="home.joinGroup" tag="p">
+        <template #group>
+          <a href="https://qm.qq.com/q/DNU3nJxnwY" target="_blank" class="link whitespace-nowrap">
+            {{ t('home.joinGroupName') }}
+          </a>
+        </template>
+      </Translation>
+    </p>
     <div v-if="hitokoto" class="text-muted-foreground italic text-sm flex flex-col w-fit mx-auto max-w-[80vw]">
       <span class="pr-[2em] text-start whitespace-pre-wrap truncate">{{ hitokoto.content }}</span>
       <span class="pl-[2em] self-end">——{{ hitokoto.from }}</span>
