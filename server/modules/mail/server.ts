@@ -1,8 +1,9 @@
 import type { Awaitable } from '@/types'
 import { eq } from 'drizzle-orm'
 import { simpleParser } from 'mailparser'
-import { db, emails, users } from 'server/database'
+import { db, users } from 'server/database'
 import { SMTPServer } from 'smtp-server'
+import { deliverMailToUser } from './service'
 
 type EmailHandler = (data: {
   toAddress: string
@@ -18,15 +19,37 @@ export function onEmail(handler: EmailHandler) {
   handlers.push(handler)
 }
 
+function getUsernameFromAddress(address: string) {
+  const normalizedAddress = address.trim().toLowerCase()
+  const [username, domain] = normalizedAddress.split('@')
+
+  if (!username || domain !== 'pbhh.net')
+    return null
+
+  return username
+}
+
 export const mailServer = new SMTPServer({
   authOptional: true,
   onRcptTo(address, _session, callback) {
-    if (address.address.endsWith('@pbhh.net')) {
-      callback()
+    const username = getUsernameFromAddress(address.address)
+
+    if (!username) {
+      callback(new Error('Only existing @pbhh.net recipients are accepted'))
+      return
     }
-    else {
-      callback(new Error('Only @pbhh.net addresses accepted'))
+
+    const user = db.select({ username: users.username })
+      .from(users)
+      .where(eq(users.username, username))
+      .get()
+
+    if (!user) {
+      callback(new Error(`Recipient ${address.address} does not exist`))
+      return
     }
+
+    callback()
   },
   async onData(stream, session, callback) {
     try {
@@ -50,14 +73,9 @@ export const mailServer = new SMTPServer({
 })
 
 onEmail(async ({ toAddress, subject, html, text, fromAddress }) => {
-  const username = toAddress.split('@')[0] ?? ''
+  const username = getUsernameFromAddress(toAddress)
+  if (!username)
+    return
 
-  const user = await db.select({ username: users.username })
-    .from(users)
-    .where(eq(users.username, username))
-    .get()
-
-  if (user) {
-    await db.insert(emails).values({ username, fromAddress, subject, html, text })
-  }
+  await deliverMailToUser(username, fromAddress, subject, text, html)
 })

@@ -99,6 +99,13 @@
       "when": 1773475468576,
       "tag": "0013_even_psynapse",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1773565200000,
+      "tag": "0014_handy_mail_notifications",
+      "breakpoints": true
     }
   ]
 }

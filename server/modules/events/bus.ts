@@ -47,6 +47,12 @@ export interface AppEventMap {
     replyId: number
     replyContent?: string
   }
+  'notify.mail.received': {
+    recipientUsername: string
+    emailId: number
+    fromAddress: string
+    subject: string
+  }
 }
 
 export type AppEvent = {

@@ -25,5 +25,6 @@ export default new Elysia()
       like: t.Optional(t.Boolean()),
       reply: t.Optional(t.Boolean()),
       post: t.Optional(t.Boolean()),
+      mail: t.Optional(t.Boolean()),
     }),
   })

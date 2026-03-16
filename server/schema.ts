@@ -1,7 +1,7 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-export type NotificationType = 'like' | 'reply' | 'post'
-export const NOTIFICATION_TYPES: NotificationType[] = ['like', 'reply', 'post']
+export type NotificationType = 'like' | 'reply' | 'post' | 'mail'
+export const NOTIFICATION_TYPES: NotificationType[] = ['like', 'reply', 'post', 'mail']
 
 export const users = sqliteTable('users', {
   username: text('username').notNull().primaryKey(),
@@ -54,9 +54,11 @@ export const notifications = sqliteTable('notifications', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').notNull().references(() => users.username),
   type: text('type').notNull(),
-  actorUsername: text('actor_username').notNull().references(() => users.username),
-  postId: integer('post_id').notNull(),
+  actorUsername: text('actor_username').references(() => users.username),
+  actorLabel: text('actor_label'),
+  postId: integer('post_id'),
   replyId: integer('reply_id'),
+  emailId: integer('email_id'),
   read: integer('read', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 })

@@ -3,7 +3,7 @@ import type { ServerMessageMap } from 'server/modules/room/model'
 import { ArrowLeft, Flag, Send, Swords } from 'lucide-vue-next'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Translation, useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -333,6 +333,11 @@ function formatTime(val: number | string | Date) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+function getUserProfileLink(username: string) {
+  const normalizedUsername = username.trim()
+  return normalizedUsername ? `/@${normalizedUsername}` : ''
+}
+
 function gameEventText(entry: GameEvent): string {
   switch (entry.event) {
     case 'start':
@@ -629,19 +634,27 @@ onUnmounted(() => {
             class="flex gap-2"
             :class="entry.data.username === user?.username ? 'flex-row-reverse' : 'flex-row'"
           >
-            <UserAvatar
-              :username="entry.data.username"
-              :nickname="entry.data.nickname"
-              :avatar="entry.data.avatar"
-              size="size-8"
-              class="shrink-0 mt-0.5"
-            />
+            <component :is="getUserProfileLink(entry.data.username) ? RouterLink : 'span'" :to="getUserProfileLink(entry.data.username)" class="shrink-0 mt-0.5">
+              <UserAvatar
+                :username="entry.data.username"
+                :nickname="entry.data.nickname"
+                :avatar="entry.data.avatar"
+                size="size-8"
+              />
+            </component>
             <div
               class="flex flex-col gap-0.5 max-w-[70%]"
               :class="entry.data.username === user?.username ? 'items-end' : 'items-start'"
             >
               <span class="text-xs text-muted-foreground px-1">
-                <span class="font-medium text-foreground/80">{{ entry.data.nickname }}</span>
+                <component
+                  :is="getUserProfileLink(entry.data.username) ? RouterLink : 'span'"
+                  :to="getUserProfileLink(entry.data.username)"
+                  class="font-medium text-foreground/80"
+                  :class="getUserProfileLink(entry.data.username) ? 'hover:underline underline-offset-4' : ''"
+                >
+                  {{ entry.data.nickname }}
+                </component>
                 <!-- <span class="opacity-50">@{{ entry.data.username }}</span> -->
                 <span class="ml-1">{{ formatTime(entry.data.createdAt) }}</span>
               </span>

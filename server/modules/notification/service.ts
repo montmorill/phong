@@ -1,7 +1,7 @@
 import type { AppEvent, AppEventMap } from '../events/bus'
 import { and, count, desc, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
-import { db, notifications, posts, userBindings, users } from 'server/database'
+import { db, emails, notifications, posts, userBindings, users } from 'server/database'
 import { bus } from '../events/bus'
 import * as FollowService from '../follow/service'
 import { isPrefEnabled } from './prefs'
@@ -145,12 +145,16 @@ export function list(username: string) {
       id: notifications.id,
       type: notifications.type,
       actorUsername: notifications.actorUsername,
+      actorLabel: notifications.actorLabel,
       actorNickname: users.nickname,
       actorAvatar: users.avatar,
       postId: notifications.postId,
       postContent: posts.content,
       replyId: notifications.replyId,
       replyContent: replyPost.content,
+      emailId: notifications.emailId,
+      emailSubject: emails.subject,
+      emailFromAddress: emails.fromAddress,
       read: notifications.read,
       createdAt: notifications.createdAt,
     })
@@ -158,27 +162,46 @@ export function list(username: string) {
     .leftJoin(users, eq(notifications.actorUsername, users.username))
     .leftJoin(posts, eq(notifications.postId, posts.id))
     .leftJoin(replyPost, eq(notifications.replyId, replyPost.id))
+    .leftJoin(emails, eq(notifications.emailId, emails.id))
     .where(eq(notifications.username, username))
     .orderBy(desc(notifications.createdAt))
     .all()
 
   return rows.map(row => ({
     ...row,
+    actorLabel: row.actorLabel ?? row.actorNickname ?? row.actorUsername ?? row.emailFromAddress ?? '',
     createdAt: row.createdAt.getTime(),
   }))
 }
 
 export function markRead(id: number, username: string) {
+  const notification = db.select({ emailId: notifications.emailId }).from(notifications).where(and(
+    eq(notifications.id, id),
+    eq(notifications.username, username),
+  )).get()
+
   db.update(notifications).set({ read: true }).where(and(
     eq(notifications.id, id),
     eq(notifications.username, username),
   )).run()
+
+  if (notification?.emailId) {
+    db.update(emails).set({ read: true }).where(and(
+      eq(emails.id, notification.emailId),
+      eq(emails.username, username),
+    )).run()
+  }
 }
 
 export function markAllRead(username: string) {
   db.update(notifications).set({ read: true }).where(and(
     eq(notifications.username, username),
     eq(notifications.read, false),
+  )).run()
+
+  db.update(emails).set({ read: true }).where(and(
+    eq(emails.username, username),
+    eq(emails.read, false),
   )).run()
 }
 

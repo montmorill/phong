@@ -7,8 +7,8 @@ import { api } from '@/lib/api'
 
 const { t } = useI18n()
 
-type NotifType = 'like' | 'reply' | 'post'
-const NOTIF_TYPES: NotifType[] = ['like', 'reply', 'post']
+type NotifType = 'like' | 'reply' | 'post' | 'mail'
+const NOTIF_TYPES: NotifType[] = ['like', 'reply', 'post', 'mail']
 
 const notifPrefs = ref<Record<NotifType, boolean> | null>(null)
 

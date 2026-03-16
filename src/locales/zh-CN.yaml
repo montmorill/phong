@@ -40,7 +40,7 @@ settings:
   title: 设置
   tabs:
     profile: 个人资料
-    appearance: 外观
+    appearance: 外观设置
     bind: 平台绑定
     notifications: 通知设置
     hitokoto: 一言来源
@@ -83,6 +83,9 @@ settings:
       post:
         label: 关注的人发帖
         desc: 你关注的人发布新题壁时通知你
+      mail:
+        label: 邮件
+        desc: 收到站内邮件时通知你
     inbox: 收件箱
     markAllRead: 全部标为已读
     markAllReadDone: 已全部标为已读
@@ -163,6 +166,34 @@ inbox:
   likeActors: ' 等 {count} 人'
   reply: 回复了你的题壁
   post: 发布了新题壁
+  mail: 发来了一封邮件
+mail:
+  compose: 发邮件
+  composeTitle: 写邮件
+  composeDescription: 通过站内邮箱给其他用户发送一封邮件。
+  composeAddress: 收件地址：{address}
+  recipientUsername: 收件用户名
+  recipientPlaceholder: 请输入对方用户名
+  subject: 主题
+  subjectPlaceholder: 请输入邮件主题
+  body: 正文
+  bodyPlaceholder: 写点想说的话…
+  send: 发送
+  sending: 发送中…
+  sent: 邮件已发送
+  sentDone: 已发送
+  sentDescription: 邮件已发送成功，对方会在收件箱收到提醒。
+  sendFailed: 发送失败，请稍后再试
+  reply: 回信
+  delete: 删除邮件
+  deleteConfirm: 删除邮件
+  deleteDescription: 此操作不可撤销，这封邮件将被永久删除。
+  deleting: 删除中…
+  from: 发件人：
+  receivedAt: 接收时间：
+  noSubject: （无主题）
+  emptyBody: 这封邮件没有正文内容。
+  notFound: 邮件不存在
 userPage:
   notFound: 用户不存在
   follow: 关注

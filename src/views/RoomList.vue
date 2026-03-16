@@ -22,7 +22,6 @@ const router = useRouter()
 const deletingRoom = ref<Room | null>(null)
 const renamingId = ref<number | null>(null)
 const renameDraft = ref('')
-const renameInputEl = ref<InstanceType<typeof Input> | null>(null)
 
 async function loadRooms() {
   loading.value = true
@@ -52,9 +51,9 @@ function startRename(room: Room) {
   renamingId.value = room.id
   renameDraft.value = room.name
   nextTick(() => {
-    const el = renameInputEl.value?.$el as HTMLInputElement | undefined
-    el?.focus()
-    el?.select()
+    const input = document.querySelector<HTMLInputElement>(`input[data-room-rename-id="${room.id}"]`)
+    input?.focus()
+    input?.select()
   })
 }
 
@@ -129,8 +128,9 @@ onMounted(loadRooms)
         <!-- Inline rename input -->
         <Input
           v-if="renamingId === room.id"
-          ref="renameInputEl"
           v-model="renameDraft"
+          :data-room-rename-id="room.id"
+          autofocus
           :placeholder="$t('room.renamePlaceholder')"
           minlength="2"
           maxlength="50"

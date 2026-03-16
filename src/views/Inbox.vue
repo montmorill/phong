@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Check, Inbox } from 'lucide-vue-next'
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { Check, Inbox, MailPlus } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -12,14 +12,17 @@ import { api, unreadCount } from '@/lib/api'
 
 interface NotificationItem {
   id: number
-  type: 'like' | 'reply' | 'post'
-  actorUsername: string
-  actorNickname: string
-  actorAvatar: string
-  postId: number
-  postContent: string
+  type: 'like' | 'reply' | 'post' | 'mail'
+  actorUsername?: string
+  actorLabel: string
+  actorAvatar?: string
+  postId?: number | null
+  postContent?: string | null
   replyId?: number
   replyContent?: string
+  emailId?: number | null
+  emailSubject?: string | null
+  emailFromAddress?: string | null
   read: boolean
   createdAt: number
 }
@@ -27,18 +30,21 @@ interface NotificationItem {
 interface Actor {
   username: string
   nickname: string
-  avatar: string
+  avatar?: string
 }
 
 interface DisplayItem {
   ids: number[]
   unreadIds: number[]
-  type: 'like' | 'reply' | 'post'
+  type: 'like' | 'reply' | 'post' | 'mail'
   actors: [Actor, ...Actor[]]
-  postId: number
-  postContent: string
+  postId?: number | null
+  postContent?: string | null
   replyId?: number
   replyContent?: string
+  emailId?: number | null
+  emailSubject?: string | null
+  emailFromAddress?: string | null
   read: boolean
   createdAt: number
 }
@@ -50,10 +56,8 @@ const timeStr = useTimeStr()
 const displayItems = ref<DisplayItem[]>([])
 const loading = ref(true)
 const markingAllRead = ref(false)
-const allMarked = ref(false)
+const hasUnreadItems = computed(() => displayItems.value.some(item => item.unreadIds.length > 0))
 
-// IntersectionObserver for like items: mark read on leave viewport
-const inViewportLikeKeys = new Set<number>()
 let observer: IntersectionObserver | null = null
 
 function markItemReadLocally(item: DisplayItem) {
@@ -72,6 +76,9 @@ async function markItemRead(item: DisplayItem) {
 }
 
 async function markAllRead() {
+  if (!hasUnreadItems.value)
+    return
+
   markingAllRead.value = true
   await api.notifications.read.post()
   unreadCount.value = 0
@@ -80,7 +87,6 @@ async function markAllRead() {
     item.read = true
   }
   markingAllRead.value = false
-  allMarked.value = true
 }
 
 function setupLikeObserver() {
@@ -88,13 +94,11 @@ function setupLikeObserver() {
     for (const entry of entries) {
       const key = Number((entry.target as HTMLElement).dataset.itemKey)
       if (entry.isIntersecting) {
-        inViewportLikeKeys.add(key)
-      }
-      else if (inViewportLikeKeys.has(key)) {
-        inViewportLikeKeys.delete(key)
         const item = displayItems.value.find(i => i.ids[0] === key && i.type === 'like')
-        if (item?.unreadIds.length)
+        if (item?.unreadIds.length) {
           markItemRead(item)
+          observer?.unobserve(entry.target)
+        }
       }
     }
   })
@@ -122,12 +126,12 @@ onMounted(async () => {
 
   for (const item of data as NotificationItem[]) {
     const actor = {
-      username: item.actorUsername,
-      nickname: item.actorNickname,
+      username: item.actorUsername ?? item.actorLabel,
+      nickname: item.actorLabel,
       avatar: item.actorAvatar,
     }
     if (item.type === 'like') {
-      const existing = likesByPost.get(item.postId)
+      const existing = likesByPost.get(item.postId!)
       if (existing) {
         existing.ids.push(item.id)
         existing.actors.push(actor)
@@ -147,7 +151,7 @@ onMounted(async () => {
           read: item.read,
           createdAt: item.createdAt,
         }
-        likesByPost.set(item.postId, merged)
+        likesByPost.set(item.postId!, merged)
         result.push(merged)
       }
     }
@@ -161,6 +165,9 @@ onMounted(async () => {
         postContent: item.postContent,
         replyId: item.replyId,
         replyContent: item.replyContent,
+        emailId: item.emailId,
+        emailSubject: item.emailSubject,
+        emailFromAddress: item.emailFromAddress,
         read: item.read,
         createdAt: item.createdAt,
       })
@@ -200,9 +207,14 @@ function scrollToSaved() {
 
 async function navigate(item: DisplayItem) {
   if (item.type !== 'like' && item.unreadIds.length)
-    markItemRead(item)
+    await markItemRead(item)
   sessionStorage.setItem('scrollToInbox', `notif-${item.ids[0]}`)
-  router.push(`/post/${item.postId}`)
+  if (item.type === 'mail' && item.emailId) {
+    router.push(`/mail/${item.emailId}`)
+    return
+  }
+  if (item.postId)
+    router.push(`/post/${item.postId}`)
 }
 </script>
 
@@ -214,15 +226,24 @@ async function navigate(item: DisplayItem) {
         {{ t('inbox.title') }}
       </h1>
       <Button
+        variant="outline"
+        size="sm"
+        class="ml-auto gap-1.5"
+        @click="router.push('/mail/compose')"
+      >
+        <MailPlus class="size-4" />
+        {{ t('mail.compose') }}
+      </Button>
+      <Button
         v-if="displayItems.length"
         variant="ghost"
         size="sm"
-        class="ml-auto text-xs text-muted-foreground"
-        :disabled="markingAllRead || allMarked"
+        class="text-xs text-muted-foreground"
+        :disabled="markingAllRead || !hasUnreadItems"
         @click="markAllRead"
       >
         <Spinner v-if="markingAllRead" data-icon="inline-start" />
-        {{ allMarked ? t('settings.notifications.markAllReadDone') : t('settings.notifications.markAllRead') }}
+        {{ hasUnreadItems ? t('settings.notifications.markAllRead') : t('settings.notifications.markAllReadDone') }}
       </Button>
     </div>
 
@@ -247,7 +268,7 @@ async function navigate(item: DisplayItem) {
               :key="actor.username"
               class="size-8 border-2 border-background shrink-0"
             >
-              <AvatarImage :src="resolveAvatarUrl(actor.avatar)" :alt="actor.username" />
+              <AvatarImage :src="resolveAvatarUrl(actor.avatar ?? '')" :alt="actor.username" />
               <AvatarFallback>{{ actor.nickname.slice(0, 2) }}</AvatarFallback>
             </Avatar>
           </div>
@@ -269,12 +290,18 @@ async function navigate(item: DisplayItem) {
               <span class="text-sm text-muted-foreground">{{ t(`inbox.${item.type}`) }}</span>
               <span v-if="!item.read" class="size-1.5 rounded-full bg-blue-500 shrink-0" />
             </div>
-            <p class="text-xs text-muted-foreground mt-0.5 truncate">{{ item.postContent }}</p>
-            <p v-if="item.replyContent" class="text-xs mt-0.5 truncate">{{ item.replyContent }}</p>
+            <p v-if="item.type === 'mail'" class="text-xs text-muted-foreground mt-0.5 truncate">
+              {{ item.emailSubject || t('mail.noSubject') }}
+            </p>
+            <p v-else class="text-xs text-muted-foreground mt-0.5 truncate">{{ item.postContent }}</p>
+            <p v-if="item.type === 'mail' && item.emailFromAddress" class="text-xs mt-0.5 truncate">
+              {{ item.emailFromAddress }}
+            </p>
+            <p v-else-if="item.replyContent" class="text-xs mt-0.5 truncate">{{ item.replyContent }}</p>
             <p class="text-xs text-muted-foreground mt-0.5">{{ timeStr(item.createdAt) }}</p>
           </div>
           <Button
-            v-if="!item.read"
+            v-if="!item.read && item.type !== 'like'"
             variant="ghost"
             size="icon"
             class="size-7 shrink-0 text-muted-foreground hover:text-foreground"

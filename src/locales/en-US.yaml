@@ -83,6 +83,9 @@ settings:
       post:
         label: New posts from followed users
         desc: Notify you when someone you follow publishes a new post
+      mail:
+        label: Mail
+        desc: Notify you when you receive an internal mail
     inbox: Inbox
     markAllRead: Mark all as read
     markAllReadDone: Marked all as read
@@ -163,6 +166,34 @@ inbox:
   likeActors: ' and {count} others'
   reply: replied to your post
   post: published a new post
+  mail: sent you an email
+mail:
+  compose: Send email
+  composeTitle: Compose email
+  composeDescription: Send an internal email to another user through the site mailbox.
+  composeAddress: 'Recipient: {address}'
+  recipientUsername: Recipient username
+  recipientPlaceholder: Enter the recipient username
+  subject: Subject
+  subjectPlaceholder: Enter the email subject
+  body: Message
+  bodyPlaceholder: Write something...
+  send: Send
+  sending: Sending...
+  sent: Email sent
+  sentDone: Sent
+  sentDescription: The email was sent successfully and the recipient will be notified in their inbox.
+  sendFailed: Failed to send email. Please try again later.
+  reply: Reply
+  delete: Delete email
+  deleteConfirm: Delete email
+  deleteDescription: This action cannot be undone. This email will be permanently deleted.
+  deleting: Deleting...
+  from: 'From: '
+  receivedAt: 'Received: '
+  noSubject: '(No subject)'
+  emptyBody: This email has no body content.
+  notFound: Email not found
 userPage:
   notFound: User not found
   follow: Follow
@@ -205,7 +236,7 @@ room:
       btnStart: Feihualing
       btnEnd: End Game
       startPanelHint: Enter a keyword and all online players will take turns reciting lines of poetry containing it
-      keywordPlaceholder: 'Keyword (for example: flower)'
+      keywordPlaceholder: 'Keyword (for example: 花)'
       startConfirm: Start
       selectPlayers: Players
       timeoutLabel: Time per turn
