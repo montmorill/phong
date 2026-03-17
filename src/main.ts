@@ -28,7 +28,7 @@ const router = createRouter({
     { path: '/post', component: () => import('@/views/PostPage.vue') },
     { path: '/post/:id', component: () => import('@/views/PostDetail.vue'), props: route => ({ id: Number(route.params.id) }) },
     { path: '/hanting', component: () => import('@/views/Hanting.vue') },
-    { path: '/hanting/:id', redirect: '/hanting' },
+    { path: '/hanting/:id', component: () => import('@/views/Hanting.vue'), props: route => ({ id: Number(route.params.id) }) },
     { path: '/@:username', component: () => import('@/views/UserPage.vue') },
   ],
 })

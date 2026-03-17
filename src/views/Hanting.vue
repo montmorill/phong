@@ -3,7 +3,7 @@ import type { FeedbackType } from 'server/modules/hanting/service'
 import { Dices, Eye, EyeOff, Flag, Star } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Translation, useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, user } from '@/lib/api'
@@ -27,6 +27,8 @@ interface Word {
   userFeedback: string[]
 }
 
+const props = defineProps<{ id?: number }>()
+const router = useRouter()
 const { t, te } = useI18n()
 
 const word = ref<Word | null>(null)
@@ -97,7 +99,23 @@ async function loadRandom() {
 
   const { data } = await api.hanting.random.get({ query: filterQuery.value })
   if (data) {
-    word.value = data as unknown as Word
+    word.value = data
+    router.push(`/hanting/${data.id}`)
+    loading.value = false
+  }
+  else {
+    loading.value = false
+    word.value = null
+  }
+}
+
+async function loadById(id: number) {
+  loading.value = true
+  showAnswer.value = false
+  showFeedback.value = false
+  const { data } = await api.hanting({ id }).get()
+  if (data) {
+    word.value = data
     loading.value = false
   }
   else {
@@ -158,13 +176,24 @@ async function submitFeedback(type: FeedbackType) {
   }
 }
 
+watch(() => props.id, (id, oldId) => {
+  if (id && id !== oldId)
+    loadById(id)
+})
+
 watch(filterQuery, () => {
   refreshRandomByFilters()
 }, { deep: true })
 
 onMounted(async () => {
   await loadCompetitions()
-  await refreshRandomByFilters()
+  if (props.id) {
+    await loadCount()
+    await loadById(props.id)
+  }
+  else {
+    await refreshRandomByFilters()
+  }
 })
 </script>
 

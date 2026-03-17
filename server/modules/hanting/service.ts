@@ -1,6 +1,7 @@
 import type { SQL } from 'drizzle-orm'
 import { and, eq, sql } from 'drizzle-orm'
 import { t } from 'elysia'
+import { pinyin } from 'pinyin-pro'
 import { db, hantingFeedback, hantingWords } from 'server/database'
 
 export const feedbackType = t.Union([
@@ -105,4 +106,32 @@ export function competitions() {
     .all()
     .map(r => r.competition)
     .sort()
+}
+
+/**
+ * Replace characters in text that are the answer or homophones of the answer with their pinyin.
+ */
+export function censorText(text: string, answerChars: string[], answerPinyins: Set<string>): string {
+  return [...text].map((char) => {
+    if (/\s/.test(char))
+      return char
+    const charPinyin = pinyin(char, { toneType: 'symbol' })
+    if (charPinyin === char)
+      return char // not a Chinese character
+    if (answerChars.includes(char) || answerPinyins.has(charPinyin))
+      return ` ${charPinyin} `
+    return char
+  }).join('').replace(/ {2,}/g, ' ').trim()
+}
+
+export function censorWord(word: typeof hantingWords.$inferSelect) {
+  const chars = [...word.word]
+  const pinyins = new Set(
+    chars.map(c => pinyin(c, { toneType: 'symbol' })),
+  )
+  return {
+    ...word,
+    definition: word.definition ? censorText(word.definition, chars, pinyins) : word.definition,
+    example: word.example ? censorText(word.example, chars, pinyins) : word.example,
+  }
 }

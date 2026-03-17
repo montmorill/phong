@@ -18,6 +18,7 @@
     "elysia": "^1.4.26",
     "mailparser": "^3.9.4",
     "nodemailer": "^8.0.2",
+    "pinyin-pro": "^3.28.0",
     "smtp-server": "^3.18.1"
   },
   "devDependencies": {
