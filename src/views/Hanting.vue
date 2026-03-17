@@ -53,6 +53,17 @@ const stars = computed(() => {
   return 4 - word.value.level
 })
 
+const rubyPairs = computed(() => {
+  if (!word.value)
+    return []
+  const chars = [...word.value.word]
+  const pinyins = word.value.pinyin.split(/\s+/)
+  return chars.map((char, i) => ({
+    char,
+    pinyin: pinyins[i] || '',
+  }))
+})
+
 const competitionLabel = computed(() => {
   if (!word.value)
     return ''
@@ -251,21 +262,22 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="text-center space-y-2 py-4">
-        <p class="text-lg text-muted-foreground">
-          {{ word.pinyin }}
-        </p>
-        <p v-if="showAnswer" class="text-3xl font-bold tracking-widest">
-          {{ word.word }}
+      <div class="text-center py-4 space-y-4">
+        <p class="text-3xl font-bold">
+          <ruby v-for="{ char, pinyin } in rubyPairs" :key="char" class="mx-1">
+            <span class="transition-[filter] duration-200" :class="!showAnswer && 'blur-md'">{{ char }}</span>
+            <rp>(</rp>
+            <rt class="text-sm font-normal text-muted-foreground">{{ pinyin }}</rt>
+            <rp>)</rp>
+          </ruby>
         </p>
         <p v-if="word.definition" class="text-sm text-muted-foreground">
           {{ word.definition }}
         </p>
+        <p v-if="word.example" class="text-sm text-muted-foreground text-start whitespace-pre-wrap">
+          {{ word.example }}
+        </p>
       </div>
-
-      <p v-if="showAnswer && word.example" class="text-sm text-muted-foreground text-start whitespace-pre-wrap">
-        {{ word.example }}
-      </p>
 
       <div class="flex items-center justify-center gap-2 pt-2">
         <Button variant="outline" size="sm" class="gap-1.5" @click="showAnswer = !showAnswer">
