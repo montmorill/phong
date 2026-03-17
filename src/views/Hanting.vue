@@ -99,8 +99,9 @@ async function loadRandom() {
 
   const { data } = await api.hanting.random.get({ query: filterQuery.value })
   if (data) {
-    router.replace(`/hanting/${data.id}`)
-    await loadWord(data.id)
+    word.value = data as unknown as Word
+    router.replace(`/hanting/${word.value.id}`)
+    loading.value = false
   }
   else {
     loading.value = false

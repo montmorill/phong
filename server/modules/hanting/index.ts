@@ -20,8 +20,16 @@ function toFilters(query: { flag?: number, level?: number, competition?: string 
 
 export default new Elysia()
   .get('/hanting/random', ({ query, status }) => {
-    return HantingService.random(toFilters(query))
-      || status(404, { message: 'not found' })
+    const word = HantingService.random(toFilters(query))
+    if (!word)
+      return status(404, { message: 'not found' })
+
+    return new Response(null, {
+      status: 307,
+      headers: {
+        Location: `/api/hanting/${word.id}`,
+      },
+    })
   }, { query: filterQuery })
   .get('/hanting/count', ({ query }) => {
     return { count: HantingService.count(toFilters(query)) }
