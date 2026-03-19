@@ -153,12 +153,12 @@ export function censorText(text: string, answerChars: string[], answerPinyins: S
 
 export function buildCensorMap(word: typeof hantingWords.$inferSelect): Record<string, string> {
   const answerChars = [...word.word]
-  const answerPinyins = new Set(word.pinyin.split(/\s+/))
+  const answerPinyins = new Set(word.pinyin.normalize('NFC').split(/\s+/))
   const map: Record<string, string> = {}
   const allText = word.definition + word.example
   for (const char of new Set([...allText])) {
     if (/\s/.test(char)) continue
-    const charPinyin = pinyin(char, { toneType: 'symbol' })
+    const charPinyin = pinyin(char, { toneType: 'symbol' }).normalize('NFC')
     if (charPinyin === char) continue
     if (answerChars.includes(char) || answerPinyins.has(charPinyin))
       map[char] = charPinyin

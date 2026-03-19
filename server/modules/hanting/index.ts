@@ -28,6 +28,7 @@ export default new Elysia()
     const word = HantingService.getByKey(key)!
     return {
       ...word,
+      pinyin: word.pinyin.normalize('NFC'),
       censorMap: HantingService.buildCensorMap(word),
       feedback: HantingService.getFeedback(key),
       userFeedback: username ? HantingService.getUserFeedback(key, username) : [],
@@ -48,6 +49,7 @@ export default new Elysia()
       const key = { wordId: word.wordId, variant: word.variant }
       return {
         ...word,
+        pinyin: word.pinyin.normalize('NFC'),
         censorMap: HantingService.buildCensorMap(word),
         feedback: HantingService.getFeedback(key),
         userFeedback: username ? HantingService.getUserFeedback(key, username) : [],
