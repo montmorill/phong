@@ -236,9 +236,8 @@ async function navigate(item: DisplayItem) {
       </Button>
       <Button
         v-if="displayItems.length"
-        variant="ghost"
+        variant="outline"
         size="sm"
-        class="text-xs text-muted-foreground"
         :disabled="markingAllRead || !hasUnreadItems"
         @click="markAllRead"
       >
