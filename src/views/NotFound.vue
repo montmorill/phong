@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import hongGlyph from '@/assets/404-glyphs/hong.svg'
 import { Button } from '@/components/ui/button'
 
 const route = useRoute()
@@ -14,34 +15,38 @@ const currentPath = computed(() => {
 
 <template>
   <section class="not-found-shell relative flex min-h-[calc(100vh-4rem)] w-full items-center justify-center overflow-hidden px-6 py-12">
-    <div class="not-found-ink not-found-ink-left" aria-hidden="true" />
-    <div class="not-found-ink not-found-ink-right" aria-hidden="true" />
+    <div class="not-found-wash not-found-wash-left" aria-hidden="true" />
+    <div class="not-found-wash not-found-wash-right" aria-hidden="true" />
 
-    <div class="relative z-10 flex w-full max-w-3xl flex-col items-center text-center">
-      <p class="mb-6 text-sm tracking-[0.55em] text-muted-foreground/80">
-        薨〇薨
-      </p>
+    <div class="relative z-10 flex w-full max-w-5xl flex-col items-center text-center">
+      <div class="hong-scene mb-10" aria-hidden="true">
+        <p class="hong-kicker">
+          薨〇薨
+        </p>
 
-      <div class="hong-stage mb-8" aria-hidden="true">
-        <span class="hong-glyph hong-glyph-shadow">薨</span>
-        <span class="hong-glyph si-glyph">死</span>
-        <span class="hong-glyph hong-top-glyph">薨</span>
+        <span class="hong-404">404</span>
+
+        <span class="hong-character">
+          <img :src="hongGlyph" alt="" class="hong-glyph">
+        </span>
       </div>
 
-      <h1 class="mb-3 text-2xl font-semibold tracking-[0.15em] text-foreground sm:text-3xl">
-        您好，您误入藕花深处了
-      </h1>
+      <div class="not-found-copy flex flex-col items-center">
+        <h1 class="mb-3 text-2xl font-semibold tracking-[0.15em] text-foreground sm:text-3xl">
+          您好，您误入藕花深处了
+        </h1>
 
-      <p class="mb-8 text-sm text-muted-foreground sm:text-base">
-        这里是
-        <code class="rounded-md border bg-background/75 px-2 py-1 font-mono text-foreground">{{ currentPath }}</code>
-      </p>
+        <p class="mb-8 text-sm text-muted-foreground sm:text-base">
+          这里是
+          <code class="rounded-md border bg-background/75 px-2 py-1 font-mono text-foreground">{{ currentPath }}</code>
+        </p>
 
-      <Button as-child size="lg" class="min-w-36">
-        <RouterLink to="/">
-          回到主页
-        </RouterLink>
-      </Button>
+        <Button as-child size="lg" class="min-w-36">
+          <RouterLink to="/">
+            回到主页
+          </RouterLink>
+        </Button>
+      </div>
     </div>
   </section>
 </template>
@@ -49,119 +54,179 @@ const currentPath = computed(() => {
 <style scoped>
 .not-found-shell {
   background:
-    radial-gradient(circle at top, color-mix(in oklch, var(--foreground) 8%, transparent), transparent 42%),
-    linear-gradient(180deg, color-mix(in oklch, var(--muted) 70%, white), var(--background) 55%);
+    radial-gradient(circle at top, color-mix(in oklch, var(--foreground) 7%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in oklch, var(--muted) 70%, white), var(--background) 58%);
 }
 
-.not-found-ink {
+.not-found-wash {
   position: absolute;
-  width: 18rem;
-  height: 18rem;
+  width: 22rem;
+  height: 22rem;
   border-radius: 9999px;
   background:
-    radial-gradient(circle, color-mix(in oklch, var(--foreground) 8%, transparent), transparent 68%);
-  filter: blur(8px);
-  opacity: 0.75;
+    radial-gradient(circle, color-mix(in oklch, var(--foreground) 7%, transparent), transparent 68%);
+  filter: blur(10px);
+  opacity: 0.72;
 }
 
-.not-found-ink-left {
-  top: 10%;
-  left: -4rem;
+.not-found-wash-left {
+  top: 5%;
+  left: -5rem;
 }
 
-.not-found-ink-right {
-  right: -5rem;
-  bottom: 6%;
+.not-found-wash-right {
+  right: -6rem;
+  bottom: 3%;
 }
 
-.hong-stage {
+.hong-scene {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: min(58vw, 18rem);
-  aspect-ratio: 1;
+  width: min(86vw, 62rem);
+  height: min(66vw, 34rem);
 }
 
-.hong-glyph {
-  grid-area: 1 / 1;
-  font-family: 'Noto Serif SC', 'Noto Serif', serif;
-  font-size: clamp(7rem, 22vw, 14rem);
+.hong-kicker {
+  position: absolute;
+  left: 50%;
+  top: 5%;
+  z-index: 2;
+  margin: 0;
+  transform: translateX(-50%);
+  letter-spacing: 0.55em;
+  font-size: 0.95rem;
+  color: color-mix(in oklch, var(--muted-foreground) 88%, transparent);
+  opacity: 0;
+  animation: copy-enter 540ms ease-out 2380ms both;
+}
+
+.hong-404,
+.hong-character {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   line-height: 1;
   user-select: none;
 }
 
-.hong-glyph-main {
-  color: color-mix(in oklch, var(--foreground) 92%, black);
+.hong-character {
+  width: clamp(14rem, 34vw, 26rem);
+  height: clamp(14rem, 34vw, 26rem);
+  transform: translate(-50%, -50%);
+  animation: hong-enter 1900ms cubic-bezier(0.18, 0.82, 0.22, 1) both;
 }
 
-.hong-glyph-shadow {
-  color: color-mix(in oklch, var(--foreground) 12%, transparent);
-  transform: translateY(0.6rem) scale(1.08);
-  filter: blur(10px);
-  animation: hong-shadow-enter 1100ms ease-out both;
+.hong-glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
+  animation: hong-fade 680ms ease-out 1500ms both;
 }
 
-.si-glyph {
-  color: color-mix(in oklch, var(--foreground) 92%, black);
-  transform-origin: center 72%;
-  animation: si-enter 900ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+.hong-404 {
+  font-family: 'Noto Serif', serif;
+  font-size: clamp(9rem, 34vw, 26rem);
+  font-weight: 700;
+  letter-spacing: -0.08em;
+  color: oklch(0.82 0.11 18 / 24%);
+  opacity: 0;
+  transform: translate(-50%, -36%) scale(1.08);
+  text-shadow:
+    0.04em 0 0 oklch(0.74 0.1 210 / 16%),
+    -0.04em 0 0 oklch(0.76 0.11 20 / 16%);
+  animation: error-code-enter 760ms ease-out 2140ms both;
 }
 
-.hong-top-glyph {
-  color: color-mix(in oklch, var(--foreground) 92%, black);
-  clip-path: inset(0 0 47% 0);
-  animation: hong-top-enter 900ms cubic-bezier(0.2, 0.9, 0.2, 1) 220ms both;
+.not-found-copy {
+  opacity: 0;
+  animation: copy-enter 540ms ease-out 2380ms both;
 }
 
-@keyframes si-enter {
-  from {
+@keyframes hong-enter {
+  0% {
+    transform: translate(-50%, -52%) scale(6.4);
+  }
+
+  58% {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+
+  100% {
+    transform: translate(-45%, -35%) scale(0.82);
+  }
+}
+
+@keyframes hong-fade {
+  0% {
     opacity: 0;
-    transform: translateY(1.7rem) scale(0.58, 0.3);
-    letter-spacing: 0.3em;
+    filter: blur(8px);
   }
 
-  72% {
+  100% {
     opacity: 1;
-    transform: translateY(1.22rem) scale(1.05, 0.54);
-    letter-spacing: 0;
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(1.28rem) scale(1, 0.52);
-    letter-spacing: 0;
+    filter: blur(0);
   }
 }
 
-@keyframes hong-top-enter {
-  from {
+@keyframes error-code-enter {
+  0% {
     opacity: 0;
-    transform: translateY(-0.9rem) scale(0.82);
-    filter: blur(6px);
+    filter: blur(10px);
+    letter-spacing: 0.18em;
+    transform: translate(-50%, -36%) scale(1.18);
   }
 
   70% {
     opacity: 1;
-    transform: translateY(0.08rem) scale(1.03);
     filter: blur(0);
+    letter-spacing: -0.04em;
+    transform: translate(-50%, -36%) scale(1.01);
   }
 
-  to {
+  100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
     filter: blur(0);
+    letter-spacing: -0.08em;
+    transform: translate(-50%, -36%) scale(1);
   }
 }
 
-@keyframes hong-shadow-enter {
+@keyframes copy-enter {
   from {
     opacity: 0;
-    transform: translateY(1rem) scale(0.78);
+    transform: translateY(1rem);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0.6rem) scale(1.08);
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .hong-scene {
+    height: min(72vw, 24rem);
+  }
+
+  .hong-kicker {
+    top: 8%;
+    font-size: 0.8rem;
+  }
+
+  .hong-character {
+    animation-duration: 1700ms;
+  }
+
+  .hong-glyph {
+    animation-duration: 620ms;
+  }
+
+  .hong-404 {
+    font-size: clamp(7rem, 40vw, 14rem);
   }
 }
 </style>

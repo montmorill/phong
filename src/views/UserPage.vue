@@ -8,10 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useAvatar } from '@/composables/useAvatar'
 import { api, user } from '@/lib/api'
+import NotFound from '@/views/NotFound.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const USERNAME_PATTERN = /^\w{3,20}$/
 
 const pageUsername = computed(() => String(route.params.username ?? '').trim())
 
@@ -35,7 +37,8 @@ const isSelf = computed(() => user.value?.username === pageUsername.value)
 async function load() {
   profile.value = null
   notFound.value = false
-  if (!pageUsername.value) {
+  following.value = false
+  if (!pageUsername.value || !USERNAME_PATTERN.test(pageUsername.value)) {
     notFound.value = true
     return
   }
@@ -69,7 +72,9 @@ watch(pageUsername, load)
 </script>
 
 <template>
-  <div v-if="profile" class="w-full mb-auto max-w-2xl px-4 py-8 space-y-4">
+  <NotFound v-if="notFound" />
+
+  <div v-else-if="profile" class="w-full mb-auto max-w-2xl px-4 py-8 space-y-4">
     <div class="my-42 space-y-4 text-center">
       <Avatar class="size-24 border mx-auto">
         <AvatarImage :src="avatarUrl" :alt="profile.username" />
@@ -106,9 +111,5 @@ watch(pageUsername, load)
     </div>
 
     <PostList :key="pageUsername" :username="pageUsername" disable-user-link />
-  </div>
-
-  <div v-else-if="notFound">
-    <p class="text-muted-foreground">{{ t('userPage.notFound') }}</p>
   </div>
 </template>
