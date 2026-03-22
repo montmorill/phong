@@ -3,9 +3,10 @@ import type { AppEvent } from '../events/bus'
 import type { LogEntry } from './logger'
 import { Elysia, t } from 'elysia'
 import { bus } from '../events/bus'
-import { adminEditAuth, adminViewAuth } from './guard'
+import { adminEditAuth, adminUpdateAuth, adminViewAuth } from './guard'
 import { getLogDates, logBuffer, logListeners, readLogsByDate } from './logger'
 import { deleteTableRow, insertTableRow, queryTable, tableNames, updateTableRow } from './service'
+import { runUpdateScript } from './updater'
 
 const wsHandlers = new Map<ElysiaWS, {
   logFn: (entry: LogEntry) => void
@@ -73,3 +74,11 @@ export default new Elysia({ prefix: '/admin' })
         return status(400, { message: 'error.badRequest' })
       return { ok: true }
     }, { body: t.Record(t.String(), t.Unknown()) }))
+  .group('', app => app
+    .use(adminUpdateAuth)
+    .post('/update', ({ status }) => {
+      const result = runUpdateScript()
+      if (!result.ok)
+        return status(500, { message: 'error.updateScriptMissing' })
+      return { ok: true, scriptPath: result.scriptPath }
+    }))

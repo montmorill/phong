@@ -11,6 +11,7 @@ import AdminLog from './admin/AdminLog.vue'
 const router = useRouter()
 const canViewAdmin = computed(() => hasCapability(user.value?.capabilities, 'admin:view'))
 const canEditDatabase = computed(() => hasCapability(user.value?.capabilities, 'admin:edit'))
+const canRunUpdate = computed(() => hasCapability(user.value?.capabilities, 'admin:update'))
 
 onMounted(() => {
   if (!canViewAdmin.value)
@@ -50,6 +51,8 @@ const selectedDate = ref('')
 
 const historyLogs = ref<LogEntry[]>([])
 const historyLoading = ref(false)
+const updateRunning = ref(false)
+const updateStatus = ref('')
 
 const displayLogs = computed(() => selectedDate.value ? historyLogs.value : backendLogs.value)
 const totalLogPages = computed(() => Math.max(1, Math.ceil(displayLogs.value.length / LOG_PAGE_SIZE)))
@@ -70,6 +73,35 @@ async function loadHistoryLogs(date: string) {
     historyLogs.value = await res.json()
   historyLoading.value = false
   logPage.value = totalLogPages.value - 1
+}
+
+async function runUpdate() {
+  if (updateRunning.value)
+    return
+
+  updateRunning.value = true
+  updateStatus.value = ''
+
+  try {
+    const res = await fetch('/api/admin/update', {
+      method: 'POST',
+      headers: authHeaders.value,
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      updateStatus.value = body.message === 'error.updateScriptMissing'
+        ? '未找到 update.sh'
+        : '执行失败'
+      return
+    }
+    updateStatus.value = '已开始执行 update.sh'
+  }
+  catch {
+    updateStatus.value = '执行失败'
+  }
+  finally {
+    updateRunning.value = false
+  }
 }
 
 watch(selectedDate, (date) => {
@@ -140,8 +172,18 @@ onUnmounted(() => {
         >
           {{ label }}
         </Button>
+        <Button
+          v-if="canRunUpdate"
+          variant="outline"
+          size="sm"
+          :disabled="updateRunning"
+          @click="runUpdate"
+        >
+          {{ updateRunning ? '执行中…' : 'update.sh' }}
+        </Button>
       </div>
       <div class="ml-auto flex items-center gap-2">
+        <span v-if="updateStatus" class="text-xs text-muted-foreground">{{ updateStatus }}</span>
         <template v-if="tab === 'backend'">
           <select
             v-model="selectedDate"
