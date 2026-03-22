@@ -54,6 +54,9 @@ const threadTree = computed<ThreadNode[]>(() => {
   return roots
 })
 
+const threadVisibleDepthLimit = computed(() => post.value?.parentId ? 15 : 3)
+const threadMaxVisibleDepth = computed<number | null>(() => post.value?.parentId ? 15 : null)
+
 function setComposeRef(el: unknown) {
   composeRef.value = (el as InstanceType<typeof PostCompose>) ?? null
 }
@@ -209,13 +212,14 @@ watch(() => props.id, load)
         </div>
         <div class="space-y-3">
           <PostThreadNode
-            v-for="(item, index) in threadTree"
+            v-for="item in threadTree"
             :key="item.id"
             :node="item"
             :depth="1"
-            :guides="[]"
-            :is-last="index === threadTree.length - 1"
             :replying-to-id="replyingToId"
+            :visible-depth-limit="threadVisibleDepthLimit"
+            :max-visible-depth="threadMaxVisibleDepth"
+            :expand-step="3"
             @reply="startReply"
             @deleted="onReplyDeleted"
             @quote-click="onQuoteClick"

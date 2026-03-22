@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Minus, Plus } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import PostItem from '@/components/PostItem.vue'
 
 interface ThreadNode {
@@ -25,9 +26,12 @@ const props = withDefaults(defineProps<{
   node: ThreadNode
   depth: number
   replyingToId: number | null
-  maxExpandedDepth?: number
+  visibleDepthLimit: number
+  maxVisibleDepth?: number | null
+  expandStep?: number
 }>(), {
-  maxExpandedDepth: 3,
+  maxVisibleDepth: null,
+  expandStep: 3,
 })
 
 const emit = defineEmits<{
@@ -46,17 +50,39 @@ function countDescendants(node: ThreadNode): number {
 
 const hasChildren = computed(() => props.node.children.length > 0)
 const descendantCount = computed(() => countDescendants(props.node))
-const collapsed = ref(hasChildren.value && props.depth >= props.maxExpandedDepth)
-const flattenChildren = computed(() => props.depth >= props.maxExpandedDepth)
+const subtreeVisibleDepthLimit = ref(props.visibleDepthLimit)
+const manuallyCollapsed = ref(false)
+
+watch(() => props.visibleDepthLimit, (value) => {
+  subtreeVisibleDepthLimit.value = value
+})
+
+const reachesVisibleLimit = computed(() => hasChildren.value && props.depth >= subtreeVisibleDepthLimit.value)
+const canExpandDeeper = computed(() => {
+  if (!reachesVisibleLimit.value)
+    return false
+  if (props.maxVisibleDepth == null)
+    return true
+  return subtreeVisibleDepthLimit.value < props.maxVisibleDepth
+})
+const continueThread = computed(() => reachesVisibleLimit.value && !canExpandDeeper.value)
+const showChildren = computed(() => hasChildren.value && !manuallyCollapsed.value && !reachesVisibleLimit.value)
 const postItemProps = computed(() => {
   const { children, parentId, parentUsername, parentNickname, parentContent, ...rest } = props.node
   return rest
 })
 
-function toggleCollapsed() {
-  if (!hasChildren.value)
+function toggleChildren() {
+  if (!hasChildren.value || reachesVisibleLimit.value)
     return
-  collapsed.value = !collapsed.value
+  manuallyCollapsed.value = !manuallyCollapsed.value
+}
+
+function expandDeeper() {
+  if (!canExpandDeeper.value)
+    return
+  subtreeVisibleDepthLimit.value += props.expandStep
+  manuallyCollapsed.value = false
 }
 </script>
 
@@ -64,12 +90,12 @@ function toggleCollapsed() {
   <div class="thread-node" :class="{ 'thread-node-nested': depth > 1 }">
     <span v-if="depth > 1" class="thread-branch" aria-hidden="true">
       <button
-        v-if="hasChildren"
+        v-if="hasChildren && !continueThread"
         type="button"
         class="thread-toggle"
-        @click="toggleCollapsed"
+        @click="reachesVisibleLimit ? expandDeeper() : toggleChildren()"
       >
-        <Minus v-if="!collapsed" class="size-3.5" />
+        <Minus v-if="showChildren" class="size-3.5" />
         <Plus v-else class="size-3.5" />
       </button>
     </span>
@@ -89,10 +115,10 @@ function toggleCollapsed() {
       </div>
 
       <button
-        v-if="hasChildren && collapsed"
+        v-if="canExpandDeeper"
         type="button"
         class="thread-more"
-        @click="toggleCollapsed"
+        @click="expandDeeper"
       >
         <span class="thread-more-icon">
           <Plus class="size-3.5" />
@@ -100,10 +126,20 @@ function toggleCollapsed() {
         展开 {{ descendantCount }} 条更深回复
       </button>
 
+      <RouterLink
+        v-if="continueThread"
+        :to="`/post/${node.id}`"
+        class="thread-continue"
+      >
+        <span class="thread-more-icon">
+          <Plus class="size-3.5" />
+        </span>
+        查看后续 {{ descendantCount }} 条回复
+      </RouterLink>
+
       <div
-        v-if="hasChildren && !collapsed"
+        v-if="showChildren"
         class="thread-children"
-        :class="{ 'thread-children-flat': flattenChildren }"
       >
         <div
           v-for="(child, index) in node.children"
@@ -115,7 +151,9 @@ function toggleCollapsed() {
             :node="child"
             :depth="depth + 1"
             :replying-to-id="replyingToId"
-            :max-expanded-depth="maxExpandedDepth"
+            :visible-depth-limit="subtreeVisibleDepthLimit"
+            :max-visible-depth="maxVisibleDepth"
+            :expand-step="expandStep"
             @reply="emit('reply', $event)"
             @deleted="emit('deleted', $event)"
             @quote-click="emit('quoteClick', $event)"
@@ -178,7 +216,8 @@ function toggleCollapsed() {
   margin-top: 0.9rem;
 }
 
-.thread-more {
+.thread-more,
+.thread-continue {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -187,10 +226,12 @@ function toggleCollapsed() {
   background: transparent;
   color: var(--muted-foreground);
   font-size: 0.875rem;
+  text-decoration: none;
   transition: color 150ms ease;
 }
 
-.thread-more:hover {
+.thread-more:hover,
+.thread-continue:hover {
   color: var(--foreground);
 }
 
@@ -209,10 +250,6 @@ function toggleCollapsed() {
   position: relative;
   margin-top: 1rem;
   padding-left: 2rem;
-}
-
-.thread-children-flat {
-  padding-left: 1rem;
 }
 
 .thread-child {
@@ -250,19 +287,5 @@ function toggleCollapsed() {
 .thread-child-last::before {
   bottom: auto;
   height: 2.35rem;
-}
-
-.thread-children-flat .thread-child::before {
-  left: -0.7rem;
-}
-
-.thread-children-flat .thread-child::after {
-  left: -0.7rem;
-  width: 0.7rem;
-}
-
-.thread-children-flat .thread-node-nested > .thread-branch {
-  left: -0.7rem;
-  width: 0.7rem;
 }
 </style>
