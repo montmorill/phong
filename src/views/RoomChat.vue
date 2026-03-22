@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ServerMessageMap } from 'server/modules/room/model'
 import { ArrowLeft, Flag, Send, Swords } from 'lucide-vue-next'
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Translation, useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
@@ -9,11 +9,19 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import UserAvatar from '@/components/UserAvatar.vue'
-import { renderMarkdownBasic } from '@/composables/useMarkdown'
 import { api, user } from '@/lib/api'
+import { makeReplyPreview, renderRoomMessageHtml } from '@/lib/roomMessage'
 
 const props = defineProps<{ id: number }>()
 const router = useRouter()
+
+interface ReplyPreview {
+  id: number
+  username: string
+  nickname: string
+  avatar: string
+  content: string
+}
 
 interface Message {
   id: number
@@ -23,6 +31,7 @@ interface Message {
   content: string
   contentHtml: string
   createdAt: number | string | Date
+  replyTo: ReplyPreview | null
 }
 
 interface SystemEvent {
@@ -70,6 +79,18 @@ interface OnlineUser {
   avatar: string
 }
 
+interface RoomSummary {
+  id: number
+  name: string
+}
+
+interface ComposerCompletion {
+  key: string
+  label: string
+  detail: string
+  insertText: string
+}
+
 type ChatEntry =
   | { kind: 'message', data: Message }
   | { kind: 'system', data: SystemEvent }
@@ -79,6 +100,7 @@ const { t } = useI18n()
 const entries = ref<ChatEntry[]>([])
 const draft = ref('')
 const poemDraft = ref('')
+const rooms = ref<RoomSummary[]>([])
 const roomName = ref(t('room.unnamed', { id: props.id }))
 const onlineUsers = ref<Map<string, OnlineUser>>(new Map())
 const observerCount = ref(0)
@@ -97,15 +119,220 @@ const showStartPanel = ref(false)
 const keywordDraft = ref('')
 const timeoutSecs = ref(30)
 const selectedPlayers = ref<Set<string>>(new Set())
+const draftComposerRef = ref<InstanceType<typeof Textarea> | null>(null)
+const poemComposerRef = ref<InstanceType<typeof Textarea> | null>(null)
+const replyTarget = ref<Message | null>(null)
+const composerCursor = ref(0)
+const contextMenu = ref<{ x: number, y: number, message: Message } | null>(null)
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
 let ws: WebSocket | null = null
 let pingInterval: ReturnType<typeof setInterval> | null = null
 let countdownInterval: ReturnType<typeof setInterval> | null = null
 let inviteCountdownInterval: ReturnType<typeof setInterval> | null = null
 
+const roomMentionOptions = computed(() =>
+  rooms.value.map(room => ({ id: room.id, name: room.name })),
+)
+
 watch(showStartPanel, (val) => {
   if (val)
     selectedPlayers.value = new Set(onlineUsers.value.keys())
 })
+
+function getTextareaElement(instance: InstanceType<typeof Textarea> | null) {
+  const element = instance?.$el
+  return element instanceof HTMLTextAreaElement ? element : null
+}
+
+function isPoemComposerActive() {
+  return !!(gameState.value && gameState.value.currentPlayer === user.value?.username)
+}
+
+function getActiveComposerRef() {
+  return isPoemComposerActive() ? poemComposerRef.value : draftComposerRef.value
+}
+
+function getActiveComposerValue() {
+  return isPoemComposerActive() ? poemDraft.value : draft.value
+}
+
+function setActiveComposerValue(value: string) {
+  if (isPoemComposerActive())
+    poemDraft.value = value
+  else
+    draft.value = value
+}
+
+function focusComposer() {
+  const element = getTextareaElement(getActiveComposerRef())
+  if (!element)
+    return
+  element.focus()
+}
+
+function updateComposerCursor() {
+  const element = getTextareaElement(getActiveComposerRef())
+  composerCursor.value = element?.selectionStart ?? getActiveComposerValue().length
+}
+
+function closeContextMenu() {
+  contextMenu.value = null
+}
+
+function rememberComposerCursor() {
+  nextTick(() => updateComposerCursor())
+}
+
+function insertTextAtCursor(insertText: string, start?: number, end?: number) {
+  const element = getTextareaElement(getActiveComposerRef())
+  const value = getActiveComposerValue()
+  const rangeStart = start ?? element?.selectionStart ?? value.length
+  const rangeEnd = end ?? element?.selectionEnd ?? rangeStart
+  const nextValue = `${value.slice(0, rangeStart)}${insertText}${value.slice(rangeEnd)}`
+  setActiveComposerValue(nextValue)
+  nextTick(() => {
+    const target = getTextareaElement(getActiveComposerRef())
+    if (!target)
+      return
+    const cursor = rangeStart + insertText.length
+    target.focus()
+    target.setSelectionRange(cursor, cursor)
+    composerCursor.value = cursor
+  })
+}
+
+function mentionUser(username: string) {
+  insertTextAtCursor(`@${username} `)
+  closeContextMenu()
+}
+
+function setReplyTarget(message: Message) {
+  replyTarget.value = message
+  closeContextMenu()
+  nextTick(() => focusComposer())
+}
+
+function clearReplyTarget() {
+  replyTarget.value = null
+}
+
+function scrollToMessage(messageId: number) {
+  const element = document.getElementById(`room-message-${messageId}`)
+  if (!element)
+    return
+  element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  element.classList.add('ring-2', 'ring-primary')
+  setTimeout(() => element.classList.remove('ring-2', 'ring-primary'), 1200)
+}
+
+function startLongPress(action: () => void) {
+  clearLongPress()
+  longPressTimer = setTimeout(action, 420)
+}
+
+function clearLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function handleMessageContextMenu(event: MouseEvent, message: Message) {
+  event.preventDefault()
+  contextMenu.value = { x: event.clientX, y: event.clientY, message }
+}
+
+function handleMessagePointerDown(event: PointerEvent, message: Message) {
+  if (event.pointerType === 'mouse')
+    return
+  startLongPress(() => {
+    contextMenu.value = { x: event.clientX, y: event.clientY, message }
+  })
+}
+
+function handleAvatarPointerDown(event: PointerEvent, username: string) {
+  if (event.pointerType === 'mouse')
+    return
+  startLongPress(() => mentionUser(username))
+}
+
+type ComposerTrigger =
+  | { type: 'user', query: string, start: number, end: number }
+  | { type: 'room', query: string, start: number, end: number }
+
+function getComposerTrigger(): ComposerTrigger | null {
+  const value = getActiveComposerValue()
+  const cursor = composerCursor.value
+  const beforeCursor = value.slice(0, cursor)
+  const userMatch = /(?:^|[\s(])@([\w-]*)$/.exec(beforeCursor)
+  if (userMatch) {
+    const query = userMatch[1] ?? ''
+    return {
+      type: 'user',
+      query,
+      start: cursor - query.length - 1,
+      end: cursor,
+    }
+  }
+
+  const roomMatch = /(?:^|[\s(])_(\d*)$/.exec(beforeCursor)
+  if (roomMatch) {
+    const query = roomMatch[1] ?? ''
+    return {
+      type: 'room',
+      query,
+      start: cursor - query.length - 1,
+      end: cursor,
+    }
+  }
+
+  return null
+}
+
+const composerTrigger = computed(() => getComposerTrigger())
+const composerCompletions = computed<ComposerCompletion[]>(() => {
+  const trigger = composerTrigger.value
+  if (!trigger)
+    return []
+
+  if (trigger.type === 'user') {
+    const query = trigger.query.trim().toLowerCase()
+    return [...onlineUsers.value.values()]
+      .filter(member => !query || member.username.toLowerCase().includes(query) || member.nickname.toLowerCase().includes(query))
+      .slice(0, 8)
+      .map(member => ({
+        key: `user:${member.username}`,
+        label: member.nickname || member.username,
+        detail: `@${member.username}`,
+        insertText: `@${member.username} `,
+      }))
+  }
+
+  const query = trigger.query.trim()
+  return rooms.value
+    .filter(room => !query || String(room.id).startsWith(query) || room.name.includes(query))
+    .slice(0, 8)
+    .map(room => ({
+      key: `room:${room.id}`,
+      label: room.name || `房间 ${room.id}`,
+      detail: `_${room.id}_`,
+      insertText: `_${room.id}_ `,
+    }))
+})
+
+function applyComposerCompletion(item: ComposerCompletion) {
+  const trigger = composerTrigger.value
+  if (!trigger)
+    return
+  insertTextAtCursor(item.insertText, trigger.start, trigger.end)
+}
+
+function decorateMessage(data: Omit<Message, 'contentHtml'>): Message {
+  return {
+    ...data,
+    contentHtml: renderRoomMessageHtml(data.content ?? '', roomMentionOptions.value),
+  }
+}
 
 function scrollToBottom() {
   nextTick(() => bottomEl.value?.scrollIntoView({ behavior: 'instant' }))
@@ -169,10 +396,7 @@ const handlers = {
   message(data) {
     entries.value.push({
       kind: 'message',
-      data: {
-        ...data,
-        contentHtml: renderMarkdownBasic(data.content ?? ''),
-      },
+      data: decorateMessage(data),
     })
     scrollToBottom()
   },
@@ -270,6 +494,7 @@ async function loadRoom() {
 
   const { data: roomList } = await api.rooms.get()
   if (roomList) {
+    rooms.value = roomList
     const room = roomList.find(r => r.id === props.id)
     if (room)
       roomName.value = room.name
@@ -279,10 +504,7 @@ async function loadRoom() {
   if (msgs) {
     entries.value = (msgs as Omit<Message, 'contentHtml'>[]).map(m => ({
       kind: 'message',
-      data: {
-        ...m,
-        contentHtml: renderMarkdownBasic(m.content ?? ''),
-      },
+      data: decorateMessage(m),
     }))
     scrollToBottom()
   }
@@ -308,11 +530,18 @@ async function loadRoom() {
   }
 }
 
-function send() {
-  const content = draft.value.trim()
+function sendMessage(content: string) {
   if (!content || !ws || ws.readyState !== WebSocket.OPEN)
     return
-  ws.send(JSON.stringify({ type: 'message', content }))
+  ws.send(JSON.stringify({ type: 'message', content, replyToId: replyTarget.value?.id ?? null }))
+  replyTarget.value = null
+}
+
+function send() {
+  const content = draft.value.trim()
+  if (!content)
+    return
+  sendMessage(content)
   draft.value = ''
 }
 
@@ -322,7 +551,7 @@ function submitPoem() {
     return
   if (gameState.value?.currentPlayer !== user.value?.username)
     return
-  ws.send(JSON.stringify({ type: 'message', content }))
+  sendMessage(content)
   poemDraft.value = ''
 }
 
@@ -418,20 +647,42 @@ function respondVote(valid: boolean) {
   ws.send(JSON.stringify({ type: 'game_vote_response', valid }))
 }
 
-onMounted(loadRoom)
-onUnmounted(() => {
-  if (pingInterval)
-    clearInterval(pingInterval)
+function cleanupRoomConnection() {
+  closeContextMenu()
+  clearLongPress()
   clearCountdown()
   clearInviteCountdown()
   clearVoteCountdown()
+  if (pingInterval) {
+    clearInterval(pingInterval)
+    pingInterval = null
+  }
   ws?.close()
   ws = null
+}
+
+onMounted(() => {
+  window.addEventListener('click', closeContextMenu)
+  window.addEventListener('resize', closeContextMenu)
+  loadRoom()
+})
+watch(() => props.id, () => {
+  cleanupRoomConnection()
+  entries.value = []
+  draft.value = ''
+  poemDraft.value = ''
+  replyTarget.value = null
+  loadRoom()
+})
+onUnmounted(() => {
+  window.removeEventListener('click', closeContextMenu)
+  window.removeEventListener('resize', closeContextMenu)
+  cleanupRoomConnection()
 })
 </script>
 
 <template>
-  <div class="border-x w-full max-w-2xl mx-auto flex flex-col" style="height: calc(100vh - 4rem)">
+  <div class="relative border-x w-full max-w-2xl mx-auto flex flex-col" style="height: calc(100vh - 4rem)">
     <!-- Header -->
     <div class="flex items-center gap-3 px-4 py-3 border-b shrink-0">
       <button class="text-muted-foreground hover:text-foreground" @click="router.push('/rooms')">
@@ -645,10 +896,25 @@ onUnmounted(() => {
           <!-- Chat message -->
           <div
             v-else
+            :id="`room-message-${entry.data.id}`"
             class="flex gap-2"
             :class="entry.data.username === user?.username ? 'flex-row-reverse' : 'flex-row'"
+            @contextmenu="handleMessageContextMenu($event, entry.data)"
+            @pointerdown="handleMessagePointerDown($event, entry.data)"
+            @pointerup="clearLongPress"
+            @pointerleave="clearLongPress"
+            @pointercancel="clearLongPress"
           >
-            <component :is="getUserProfileLink(entry.data.username) ? RouterLink : 'span'" :to="getUserProfileLink(entry.data.username)" class="shrink-0 mt-0.5">
+            <component
+              :is="getUserProfileLink(entry.data.username) ? RouterLink : 'span'"
+              :to="getUserProfileLink(entry.data.username)"
+              class="shrink-0 mt-0.5"
+              @contextmenu.prevent.stop="mentionUser(entry.data.username)"
+              @pointerdown.stop="handleAvatarPointerDown($event, entry.data.username)"
+              @pointerup.stop="clearLongPress"
+              @pointerleave.stop="clearLongPress"
+              @pointercancel.stop="clearLongPress"
+            >
               <UserAvatar
                 :username="entry.data.username"
                 :nickname="entry.data.nickname"
@@ -678,6 +944,19 @@ onUnmounted(() => {
                   ? 'bg-primary text-primary-foreground rounded-tr-sm'
                   : 'bg-muted rounded-tl-sm'"
               >
+                <button
+                  v-if="entry.data.replyTo"
+                  type="button"
+                  class="mb-2 block w-full rounded-xl border border-border/70 bg-background/70 px-2.5 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-background"
+                  @click="scrollToMessage(entry.data.replyTo.id)"
+                >
+                  <div class="font-medium text-foreground/80">
+                    回复 {{ entry.data.replyTo.nickname }}
+                  </div>
+                  <div class="truncate">
+                    {{ makeReplyPreview(entry.data.replyTo.content) }}
+                  </div>
+                </button>
                 <div
                   class="prose prose-sm max-w-none text-inherit [&_*]:text-inherit prose-p:my-0 prose-pre:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 dark:prose-invert"
                   v-html="entry.data.contentHtml"
@@ -693,18 +972,54 @@ onUnmounted(() => {
     <!-- 飞花令诗句输入区（轮到自己时） -->
     <div
       v-if="gameState && gameState.currentPlayer === user?.username"
-      class="border-t px-4 py-3 shrink-0 bg-amber-50/60 dark:bg-amber-950/20"
+      class="relative border-t px-4 py-3 shrink-0 bg-amber-50/60 dark:bg-amber-950/20"
     >
       <div class="text-xs mb-2 text-amber-700 dark:text-amber-400">
         {{ t('room.game.fhl.yourTurnHint', { keyword: gameState.keyword }) }}
       </div>
+      <div
+        v-if="replyTarget"
+        class="mb-2 flex items-start justify-between gap-3 rounded-xl border border-amber-200/80 bg-background/80 px-3 py-2 text-xs"
+      >
+        <div class="min-w-0">
+          <div class="font-medium text-foreground/80">
+            回复 {{ replyTarget.nickname }}
+          </div>
+          <div class="truncate text-muted-foreground">
+            {{ makeReplyPreview(replyTarget.content) }}
+          </div>
+        </div>
+        <button type="button" class="text-muted-foreground hover:text-foreground" @click="clearReplyTarget">
+          取消
+        </button>
+      </div>
+      <div
+        v-if="composerCompletions.length"
+        class="absolute bottom-full left-4 right-4 z-30 mb-2 overflow-hidden rounded-2xl border bg-popover shadow-lg"
+      >
+        <button
+          v-for="item in composerCompletions"
+          :key="item.key"
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+          @mousedown.prevent="applyComposerCompletion(item)"
+        >
+          <span class="min-w-0 truncate font-medium">{{ item.label }}</span>
+          <span class="shrink-0 text-xs text-muted-foreground">{{ item.detail }}</span>
+        </button>
+      </div>
       <div class="flex gap-2 items-end">
         <Textarea
+          ref="poemComposerRef"
           v-model="poemDraft"
           :placeholder="t('room.game.fhl.poemPlaceholder', { keyword: gameState.keyword })"
           rows="1"
           class="flex-1 resize-none max-h-32 transition-colors border-amber-400 focus-visible:ring-amber-400"
           @keydown.enter.exact.prevent="submitPoem"
+          @input="rememberComposerCursor"
+          @click="rememberComposerCursor"
+          @keyup="rememberComposerCursor"
+          @select="rememberComposerCursor"
         />
         <Button
           size="sm"
@@ -726,17 +1041,57 @@ onUnmounted(() => {
     </div>
 
     <!-- 普通输入区（无游戏时，或游戏中非当前选手） -->
-    <div v-else-if="user" class="border-t px-4 py-3 flex gap-2 items-end shrink-0">
-      <Textarea
-        v-model="draft"
-        :placeholder="$t('room.messagePlaceholder')"
-        rows="1"
-        class="flex-1 resize-none max-h-32"
-        @keydown.enter.exact.prevent="send"
-      />
-      <Button :disabled="!draft.trim()" size="sm" @click="send">
-        <Send class="size-4" />
-      </Button>
+    <div v-else-if="user" class="relative border-t px-4 py-3 shrink-0">
+      <div
+        v-if="replyTarget"
+        class="mb-2 flex items-start justify-between gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs"
+      >
+        <div class="min-w-0">
+          <div class="font-medium text-foreground/80">
+            回复 {{ replyTarget.nickname }}
+          </div>
+          <div class="truncate text-muted-foreground">
+            {{ makeReplyPreview(replyTarget.content) }}
+          </div>
+        </div>
+        <button type="button" class="text-muted-foreground hover:text-foreground" @click="clearReplyTarget">
+          取消
+        </button>
+      </div>
+
+      <div
+        v-if="composerCompletions.length"
+        class="absolute bottom-full left-4 right-4 z-30 mb-2 overflow-hidden rounded-2xl border bg-popover shadow-lg"
+      >
+        <button
+          v-for="item in composerCompletions"
+          :key="item.key"
+          type="button"
+          class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+          @mousedown.prevent="applyComposerCompletion(item)"
+        >
+          <span class="min-w-0 truncate font-medium">{{ item.label }}</span>
+          <span class="shrink-0 text-xs text-muted-foreground">{{ item.detail }}</span>
+        </button>
+      </div>
+
+      <div class="flex gap-2 items-end">
+        <Textarea
+          ref="draftComposerRef"
+          v-model="draft"
+          :placeholder="$t('room.messagePlaceholder')"
+          rows="1"
+          class="flex-1 resize-none max-h-32"
+          @keydown.enter.exact.prevent="send"
+          @input="rememberComposerCursor"
+          @click="rememberComposerCursor"
+          @keyup="rememberComposerCursor"
+          @select="rememberComposerCursor"
+        />
+        <Button :disabled="!draft.trim()" size="sm" @click="send">
+          <Send class="size-4" />
+        </Button>
+      </div>
     </div>
 
     <!-- 未登录提示 -->
@@ -746,6 +1101,20 @@ onUnmounted(() => {
           <RouterLink to="/login" class="link">{{ t('home.loginLink') }}</RouterLink>
         </template>
       </Translation>
+    </div>
+
+    <div
+      v-if="contextMenu"
+      class="fixed z-50 min-w-36 overflow-hidden rounded-xl border bg-popover shadow-lg"
+      :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
+    >
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+        @click="setReplyTarget(contextMenu.message)"
+      >
+        回复消息
+      </button>
     </div>
   </div>
 </template>

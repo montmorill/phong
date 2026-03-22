@@ -1,4 +1,5 @@
 import type { ClientMsg } from './model'
+import process from 'node:process'
 import { Elysia } from 'elysia'
 import { requireAuth } from '../auth/guard'
 import { jwtPlugin } from '../jwt'
@@ -277,7 +278,7 @@ export default new Elysia({ prefix: '/rooms' })
 
       const game = RoomService.roomGames.get(roomId)
       if (game) {
-        const { saved, userInfo } = await RoomService.saveMessage(roomId, client.username, content)
+        const { saved, userInfo, replyTo } = await RoomService.saveMessage(roomId, client.username, content, clientMsg.replyToId)
         RoomService.send(roomId, 'message', {
           id: saved.id,
           username: client.username,
@@ -285,6 +286,7 @@ export default new Elysia({ prefix: '/rooms' })
           avatar: userInfo?.avatar ?? '',
           content: saved.content,
           createdAt: saved.createdAt,
+          replyTo,
         })
 
         // 不含关键字或重复诗句：仅作普通消息，当前玩家可继续作答
@@ -346,7 +348,7 @@ export default new Elysia({ prefix: '/rooms' })
 
       // ── 普通消息 ────────────────────────────────────────────────────────────
 
-      const { saved, userInfo } = await RoomService.saveMessage(roomId, client.username, content)
+      const { saved, userInfo, replyTo } = await RoomService.saveMessage(roomId, client.username, content, clientMsg.replyToId)
       RoomService.send(roomId, 'message', {
         id: saved.id,
         username: client.username,
@@ -354,6 +356,7 @@ export default new Elysia({ prefix: '/rooms' })
         avatar: userInfo?.avatar ?? '',
         content: saved.content,
         createdAt: saved.createdAt,
+        replyTo,
       })
     },
 

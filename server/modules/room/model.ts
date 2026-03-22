@@ -4,7 +4,7 @@ import { t } from 'elysia'
 
 /** Messages sent from client → server */
 export interface ClientMessageMap {
-  message: { content: string }
+  message: { content: string, replyToId?: number | null }
   ping: Record<string, never>
   game_start_fhl: { keyword: string, players: string[], timeoutMs: number }
   game_end_fhl: Record<string, never>
@@ -15,7 +15,21 @@ export interface ClientMessageMap {
 
 /** Messages sent from server → client */
 export interface ServerMessageMap {
-  message: { id: number, username: string, nickname: string, avatar: string, content: string, createdAt: Date }
+  message: {
+    id: number
+    username: string
+    nickname: string
+    avatar: string
+    content: string
+    createdAt: Date
+    replyTo: null | {
+      id: number
+      username: string
+      nickname: string
+      avatar: string
+      content: string
+    }
+  }
   join: { username: string }
   leave: { username: string }
   pong: Record<string, never>

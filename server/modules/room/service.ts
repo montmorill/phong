@@ -1,5 +1,5 @@
 import type { RoomClient, ServerMessageMap } from './model'
-import { asc, desc, eq } from 'drizzle-orm'
+import { asc, desc, eq, inArray } from 'drizzle-orm'
 import { db, roomMessages, rooms, users } from 'server/database'
 import * as FeiHuaLing from './games/feihualing'
 
@@ -167,10 +167,40 @@ export function deleteRoomMessages(roomId: number) {
   return db.delete(roomMessages).where(eq(roomMessages.roomId, roomId))
 }
 
-export async function saveMessage(roomId: number, username: string, content: string) {
+async function getReplyPreview(roomId: number, replyToId: number | null | undefined) {
+  if (!replyToId)
+    return null
+
+  const [replyRow] = await db
+    .select({
+      id: roomMessages.id,
+      roomId: roomMessages.roomId,
+      username: roomMessages.username,
+      content: roomMessages.content,
+      nickname: users.nickname,
+      avatar: users.avatar,
+    })
+    .from(roomMessages)
+    .innerJoin(users, eq(roomMessages.username, users.username))
+    .where(eq(roomMessages.id, replyToId))
+
+  if (!replyRow || replyRow.roomId !== roomId)
+    return null
+
+  return {
+    id: replyRow.id,
+    username: replyRow.username,
+    nickname: replyRow.nickname,
+    avatar: replyRow.avatar,
+    content: replyRow.content,
+  }
+}
+
+export async function saveMessage(roomId: number, username: string, content: string, replyToId?: number | null) {
+  const replyTo = await getReplyPreview(roomId, replyToId)
   const [saved] = await db
     .insert(roomMessages)
-    .values({ roomId, username, content })
+    .values({ roomId, username, content, replyToId: replyTo?.id ?? null })
     .returning()
 
   const [userInfo] = await db
@@ -178,7 +208,7 @@ export async function saveMessage(roomId: number, username: string, content: str
     .from(users)
     .where(eq(users.username, username))
 
-  return { saved: saved!, userInfo }
+  return { saved: saved!, userInfo, replyTo }
 }
 
 export async function listMessages(roomId: number) {
@@ -188,6 +218,7 @@ export async function listMessages(roomId: number) {
       content: roomMessages.content,
       createdAt: roomMessages.createdAt,
       username: roomMessages.username,
+      replyToId: roomMessages.replyToId,
       nickname: users.nickname,
       avatar: users.avatar,
     })
@@ -196,5 +227,37 @@ export async function listMessages(roomId: number) {
     .where(eq(roomMessages.roomId, roomId))
     .orderBy(desc(roomMessages.createdAt), desc(roomMessages.id))
     .limit(200)
-  return rows.reverse()
+
+  const replyIds = [...new Set(rows.map(row => row.replyToId).filter((id): id is number => id !== null))]
+  const replyRows = replyIds.length === 0
+    ? []
+    : await db
+        .select({
+          id: roomMessages.id,
+          username: roomMessages.username,
+          content: roomMessages.content,
+          nickname: users.nickname,
+          avatar: users.avatar,
+        })
+        .from(roomMessages)
+        .innerJoin(users, eq(roomMessages.username, users.username))
+        .where(inArray(roomMessages.id, replyIds))
+
+  const replyMap = new Map(replyRows.map(row => [row.id, row]))
+
+  return rows.reverse().map((row) => {
+    const replyTo = row.replyToId ? replyMap.get(row.replyToId) : undefined
+    return {
+      ...row,
+      replyTo: replyTo
+        ? {
+            id: replyTo.id,
+            username: replyTo.username,
+            nickname: replyTo.nickname,
+            avatar: replyTo.avatar,
+            content: replyTo.content,
+          }
+        : null,
+    }
+  })
 }

@@ -82,6 +82,7 @@ export const roomMessages = sqliteTable('room_messages', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   roomId: integer('room_id').notNull().references(() => rooms.id),
   username: text('username').notNull().references(() => users.username),
+  replyToId: integer('reply_to_id'),
   content: text('content').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 })
