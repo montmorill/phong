@@ -75,6 +75,11 @@ const postItemProps = computed(() => {
 function toggleChildren() {
   if (!hasChildren.value || reachesVisibleLimit.value)
     return
+  if (subtreeVisibleDepthLimit.value > props.visibleDepthLimit) {
+    subtreeVisibleDepthLimit.value = props.visibleDepthLimit
+    manuallyCollapsed.value = false
+    return
+  }
   manuallyCollapsed.value = !manuallyCollapsed.value
 }
 

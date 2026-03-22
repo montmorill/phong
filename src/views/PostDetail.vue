@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type * as PostService from 'server/modules/posts/service'
 import { ChevronLeft } from 'lucide-vue-next'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PostCompose from '@/components/PostCompose.vue'
@@ -19,6 +19,10 @@ type ThreadNode = ThreadItem & { children: ThreadNode[] }
 
 const props = defineProps<{ id: number }>()
 
+const ROOT_THREAD_VISIBLE_DEPTH_LIMIT = 3
+const ROOT_THREAD_MAX_VISIBLE_DEPTH = 9
+const SUBTHREAD_VISIBLE_DEPTH_LIMIT = 15
+
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
@@ -28,6 +32,8 @@ const ancestors = ref<AncestorItem[]>([])
 const thread = ref<ThreadItem[]>([])
 const loading = ref(true)
 const notFound = ref(false)
+const viewportWidth = ref(typeof window === 'undefined' ? 1024 : window.innerWidth)
+const expandedAncestorChain = ref(false)
 
 const replyingToId = ref<number | null>(null)
 const composeRef = ref<InstanceType<typeof PostCompose> | null>(null)
@@ -54,8 +60,37 @@ const threadTree = computed<ThreadNode[]>(() => {
   return roots
 })
 
-const threadVisibleDepthLimit = computed(() => post.value?.parentId ? 15 : 3)
-const threadMaxVisibleDepth = computed<number | null>(() => post.value?.parentId ? 15 : null)
+const ancestorPreviewCount = computed(() => {
+  if (viewportWidth.value < 480)
+    return 2
+  if (viewportWidth.value < 768)
+    return 3
+  return 4
+})
+const hiddenAncestorCount = computed(() =>
+  Math.max(ancestors.value.length - ancestorPreviewCount.value, 0),
+)
+const visibleAncestors = computed(() => {
+  if (expandedAncestorChain.value || hiddenAncestorCount.value === 0)
+    return ancestors.value
+  return ancestors.value.slice(-ancestorPreviewCount.value)
+})
+const subthreadVisibleDepthLimit = computed(() => {
+  const availableWidth = Math.min(Math.max(viewportWidth.value - 32, 320), 672)
+  const minCardWidth = availableWidth < 480 ? 220 : 260
+  const indentWidth = 36
+  return Math.max(4, Math.min(SUBTHREAD_VISIBLE_DEPTH_LIMIT, Math.floor((availableWidth - minCardWidth) / indentWidth) + 1))
+})
+const threadVisibleDepthLimit = computed(() =>
+  post.value?.parentId ? subthreadVisibleDepthLimit.value : ROOT_THREAD_VISIBLE_DEPTH_LIMIT,
+)
+const threadMaxVisibleDepth = computed<number | null>(() =>
+  post.value?.parentId ? subthreadVisibleDepthLimit.value : ROOT_THREAD_MAX_VISIBLE_DEPTH,
+)
+
+function updateViewportWidth() {
+  viewportWidth.value = window.innerWidth
+}
 
 function setComposeRef(el: unknown) {
   composeRef.value = (el as InstanceType<typeof PostCompose>) ?? null
@@ -73,6 +108,7 @@ async function load() {
   thread.value = []
   notFound.value = false
   replyingToId.value = null
+  expandedAncestorChain.value = false
   loading.value = true
   const { data: postData } = await api.posts({ id: props.id }).get()
   loading.value = false
@@ -155,7 +191,18 @@ function onQuoteClick(parentId: number) {
   }
 }
 
-onMounted(load)
+function toggleAncestorChain() {
+  expandedAncestorChain.value = !expandedAncestorChain.value
+}
+
+onMounted(() => {
+  updateViewportWidth()
+  window.addEventListener('resize', updateViewportWidth)
+  load()
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateViewportWidth)
+})
 watch(() => props.id, load)
 </script>
 
@@ -173,7 +220,22 @@ watch(() => props.id, load)
       {{ t('post.notFound') }}
     </div>
     <template v-else-if="post">
-      <template v-for="(ancestor, i) in ancestors" :key="ancestor.id">
+      <div
+        v-if="hiddenAncestorCount > 0"
+        class="mb-3 flex items-center gap-3"
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 rounded-full px-3 text-muted-foreground"
+          @click="toggleAncestorChain"
+        >
+          {{ expandedAncestorChain ? `收起前序 ${hiddenAncestorCount} 条回复` : `展开前序 ${hiddenAncestorCount} 条回复` }}
+        </Button>
+        <Separator class="flex-1" />
+      </div>
+
+      <template v-for="(ancestor, i) in visibleAncestors" :key="ancestor.id">
         <div
           class="px-3 py-2 border rounded-lg text-sm text-muted-foreground cursor-pointer bg-muted/30 hover:bg-muted/50 transition-colors truncate"
           @click="onQuoteClick(ancestor.id)"
@@ -183,7 +245,7 @@ watch(() => props.id, load)
         </div>
         <div
           class="ml-5 w-0.5 bg-border"
-          :class="i < ancestors.length - 1 ? 'h-3' : 'h-4'"
+          :class="i < visibleAncestors.length - 1 ? 'h-3' : 'h-4'"
         />
       </template>
       <PostItem
