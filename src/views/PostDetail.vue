@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type * as PostService from 'server/modules/posts/service'
 import { ChevronLeft } from 'lucide-vue-next'
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PostCompose from '@/components/PostCompose.vue'
 import PostItem from '@/components/PostItem.vue'
+import PostThreadNode from '@/components/PostThreadNode.vue'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
@@ -14,6 +15,7 @@ import { api, user } from '@/lib/api'
 type PostData = NonNullable<ReturnType<typeof PostService.get>>
 type ThreadItem = ReturnType<typeof PostService.listThread>[number]
 type AncestorItem = ReturnType<typeof PostService.listAncestors>[number]
+type ThreadNode = ThreadItem & { children: ThreadNode[] }
 
 const props = defineProps<{ id: number }>()
 
@@ -29,6 +31,28 @@ const notFound = ref(false)
 
 const replyingToId = ref<number | null>(null)
 const composeRef = ref<InstanceType<typeof PostCompose> | null>(null)
+
+const threadTree = computed<ThreadNode[]>(() => {
+  const rootId = post.value?.id
+  if (!rootId)
+    return []
+
+  const nodeMap = new Map<number, ThreadNode>()
+  for (const item of thread.value)
+    nodeMap.set(item.id, { ...item, children: [] })
+
+  const roots: ThreadNode[] = []
+  for (const item of thread.value) {
+    const node = nodeMap.get(item.id)!
+    if (item.parentId === rootId) {
+      roots.push(node)
+      continue
+    }
+    nodeMap.get(item.parentId)?.children.push(node)
+  }
+
+  return roots
+})
 
 function setComposeRef(el: unknown) {
   composeRef.value = (el as InstanceType<typeof PostCompose>) ?? null
@@ -102,7 +126,18 @@ function onDeleted() {
 }
 
 function onReplyDeleted(id: number) {
-  thread.value = thread.value.filter(item => item.id !== id)
+  const removed = new Set<number>([id])
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const item of thread.value) {
+      if (removed.has(item.parentId) && !removed.has(item.id)) {
+        removed.add(item.id)
+        changed = true
+      }
+    }
+  }
+  thread.value = thread.value.filter(item => !removed.has(item.id))
 }
 
 function onQuoteClick(parentId: number) {
@@ -172,33 +207,29 @@ watch(() => props.id, load)
           <span class="text-sm font-semibold">{{ t('post.comments') }}</span>
           <Separator class="flex-1" />
         </div>
-        <div>
-          <template v-for="(item, index) in thread" :key="item.id">
-            <div
-              v-if="index > 0 && item.parentId === thread[index - 1]?.id && replyingToId !== thread[index - 1]?.id"
-              class="ml-6 w-0.5 h-4 bg-border"
-            />
-            <div v-else-if="index > 0" class="h-3" />
-            <PostItem
-              v-bind="item"
-              replyable
-              :parent-nickname="item.parentId === post.id || (index > 0 && item.parentId === thread[index - 1]?.id && replyingToId !== thread[index - 1]?.id) ? undefined : item.parentNickname"
-              :parent-content="item.parentId === post.id || (index > 0 && item.parentId === thread[index - 1]?.id && replyingToId !== thread[index - 1]?.id) ? undefined : item.parentContent"
-              @reply="startReply(item.id)"
-              @deleted="onReplyDeleted"
-              @quote-click="onQuoteClick"
-            />
-            <template v-if="replyingToId === item.id">
-              <div class="ml-6 w-0.5 h-4 bg-border" />
+        <div class="space-y-3">
+          <PostThreadNode
+            v-for="(item, index) in threadTree"
+            :key="item.id"
+            :node="item"
+            :depth="1"
+            :guides="[]"
+            :is-last="index === threadTree.length - 1"
+            :replying-to-id="replyingToId"
+            @reply="startReply"
+            @deleted="onReplyDeleted"
+            @quote-click="onQuoteClick"
+          >
+            <template #composer="{ node }">
               <PostCompose
                 :ref="setComposeRef"
-                :parent-id="item.id"
-                :reply-to="item.nickname"
+                :parent-id="node.id"
+                :reply-to="node.nickname"
                 @posted="onReplyPosted"
                 @cancel="replyingToId = null"
               />
             </template>
-          </template>
+          </PostThreadNode>
         </div>
       </template>
     </template>
