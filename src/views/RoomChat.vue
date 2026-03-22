@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ServerMessageMap } from 'server/modules/room/model'
-import { ArrowLeft, Flag, Send, Swords } from 'lucide-vue-next'
+import { ArrowLeft, Flag, Send, Swords, X } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Translation, useI18n } from 'vue-i18n'
 import { RouterLink, useRouter } from 'vue-router'
@@ -124,7 +124,17 @@ const poemComposerRef = ref<InstanceType<typeof Textarea> | null>(null)
 const replyTarget = ref<Message | null>(null)
 const composerCursor = ref(0)
 const contextMenu = ref<{ x: number, y: number, message: Message } | null>(null)
+const contextMenuRef = ref<HTMLElement | null>(null)
+const swipeMessageId = ref<number | null>(null)
+const swipeOffset = ref(0)
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
+let suppressNextWindowClick = false
+let touchGesture: {
+  message: Message
+  startX: number
+  startY: number
+  replyTriggered: boolean
+} | null = null
 let ws: WebSocket | null = null
 let pingInterval: ReturnType<typeof setInterval> | null = null
 let countdownInterval: ReturnType<typeof setInterval> | null = null
@@ -179,6 +189,19 @@ function closeContextMenu() {
   contextMenu.value = null
 }
 
+function handleWindowPointerDown(event: PointerEvent) {
+  const target = event.target
+  if (contextMenuRef.value && target instanceof Node && contextMenuRef.value.contains(target))
+    return
+  closeContextMenu()
+}
+
+function handleWindowClick() {
+  if (!suppressNextWindowClick)
+    return
+  suppressNextWindowClick = false
+}
+
 function rememberComposerCursor() {
   nextTick(() => updateComposerCursor())
 }
@@ -209,6 +232,7 @@ function mentionUser(username: string) {
 function setReplyTarget(message: Message) {
   replyTarget.value = message
   closeContextMenu()
+  suppressNextWindowClick = true
   nextTick(() => focusComposer())
 }
 
@@ -237,6 +261,13 @@ function clearLongPress() {
   }
 }
 
+function resetTouchGesture() {
+  clearLongPress()
+  touchGesture = null
+  swipeMessageId.value = null
+  swipeOffset.value = 0
+}
+
 function handleMessageContextMenu(event: MouseEvent, message: Message) {
   event.preventDefault()
   contextMenu.value = { x: event.clientX, y: event.clientY, message }
@@ -245,15 +276,99 @@ function handleMessageContextMenu(event: MouseEvent, message: Message) {
 function handleMessagePointerDown(event: PointerEvent, message: Message) {
   if (event.pointerType === 'mouse')
     return
+  touchGesture = {
+    message,
+    startX: event.clientX,
+    startY: event.clientY,
+    replyTriggered: false,
+  }
   startLongPress(() => {
+    suppressNextWindowClick = true
     contextMenu.value = { x: event.clientX, y: event.clientY, message }
+    touchGesture = null
   })
+}
+
+function handleMessagePointerMove(event: PointerEvent, message: Message) {
+  if (event.pointerType === 'mouse' || !touchGesture || touchGesture.message.id !== message.id)
+    return
+
+  const deltaX = event.clientX - touchGesture.startX
+  const deltaY = event.clientY - touchGesture.startY
+
+  if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)
+    clearLongPress()
+
+  if (deltaX < -10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+    swipeMessageId.value = message.id
+    swipeOffset.value = Math.max(-72, deltaX)
+
+    if (deltaX <= -72 && !touchGesture.replyTriggered) {
+      touchGesture.replyTriggered = true
+      setReplyTarget(message)
+    }
+  }
+}
+
+function handleMessagePointerEnd() {
+  resetTouchGesture()
+}
+
+function handleMessageTouchStart(event: TouchEvent, message: Message) {
+  const touch = event.touches[0]
+  if (!touch)
+    return
+  touchGesture = {
+    message,
+    startX: touch.clientX,
+    startY: touch.clientY,
+    replyTriggered: false,
+  }
+  startLongPress(() => {
+    suppressNextWindowClick = true
+    contextMenu.value = { x: touch.clientX, y: touch.clientY, message }
+    touchGesture = null
+  })
+}
+
+function handleMessageTouchMove(event: TouchEvent, message: Message) {
+  if (!touchGesture || touchGesture.message.id !== message.id)
+    return
+
+  const touch = event.touches[0]
+  if (!touch)
+    return
+
+  const deltaX = touch.clientX - touchGesture.startX
+  const deltaY = touch.clientY - touchGesture.startY
+
+  if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)
+    clearLongPress()
+
+  if (deltaX < -10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+    if (event.cancelable)
+      event.preventDefault()
+    swipeMessageId.value = message.id
+    swipeOffset.value = Math.max(-72, deltaX)
+
+    if (deltaX <= -72 && !touchGesture.replyTriggered) {
+      touchGesture.replyTriggered = true
+      setReplyTarget(message)
+    }
+  }
+}
+
+function handleMessageTouchEnd() {
+  resetTouchGesture()
 }
 
 function handleAvatarPointerDown(event: PointerEvent, username: string) {
   if (event.pointerType === 'mouse')
     return
-  startLongPress(() => mentionUser(username))
+  startLongPress(() => {
+    suppressNextWindowClick = true
+    mentionUser(username)
+  })
 }
 
 type ComposerTrigger =
@@ -649,7 +764,7 @@ function respondVote(valid: boolean) {
 
 function cleanupRoomConnection() {
   closeContextMenu()
-  clearLongPress()
+  resetTouchGesture()
   clearCountdown()
   clearInviteCountdown()
   clearVoteCountdown()
@@ -662,7 +777,8 @@ function cleanupRoomConnection() {
 }
 
 onMounted(() => {
-  window.addEventListener('click', closeContextMenu)
+  window.addEventListener('pointerdown', handleWindowPointerDown)
+  window.addEventListener('click', handleWindowClick)
   window.addEventListener('resize', closeContextMenu)
   loadRoom()
 })
@@ -675,7 +791,8 @@ watch(() => props.id, () => {
   loadRoom()
 })
 onUnmounted(() => {
-  window.removeEventListener('click', closeContextMenu)
+  window.removeEventListener('pointerdown', handleWindowPointerDown)
+  window.removeEventListener('click', handleWindowClick)
   window.removeEventListener('resize', closeContextMenu)
   cleanupRoomConnection()
 })
@@ -897,13 +1014,15 @@ onUnmounted(() => {
           <div
             v-else
             :id="`room-message-${entry.data.id}`"
-            class="flex gap-2"
+            class="flex gap-2 transition-transform duration-150 ease-out"
             :class="entry.data.username === user?.username ? 'flex-row-reverse' : 'flex-row'"
+            :style="swipeMessageId === entry.data.id ? { transform: `translateX(${swipeOffset}px)` } : undefined"
             @contextmenu="handleMessageContextMenu($event, entry.data)"
             @pointerdown="handleMessagePointerDown($event, entry.data)"
-            @pointerup="clearLongPress"
-            @pointerleave="clearLongPress"
-            @pointercancel="clearLongPress"
+            @pointermove="handleMessagePointerMove($event, entry.data)"
+            @pointerup="handleMessagePointerEnd"
+            @pointerleave="handleMessagePointerEnd"
+            @pointercancel="handleMessagePointerEnd"
           >
             <component
               :is="getUserProfileLink(entry.data.username) ? RouterLink : 'span'"
@@ -939,10 +1058,14 @@ onUnmounted(() => {
                 <span class="ml-1">{{ formatTime(entry.data.createdAt) }}</span>
               </span>
               <div
-                class="rounded-2xl px-3 py-2 text-sm wrap-break-word"
+                class="rounded-2xl px-3 py-2 text-sm wrap-break-word select-none transition-transform duration-150 ease-out md:select-text [-webkit-touch-callout:none] [touch-action:pan-y]"
                 :class="entry.data.username === user?.username
                   ? 'bg-primary text-primary-foreground rounded-tr-sm'
                   : 'bg-muted rounded-tl-sm'"
+                @touchstart="handleMessageTouchStart($event, entry.data)"
+                @touchmove="handleMessageTouchMove($event, entry.data)"
+                @touchend="handleMessageTouchEnd"
+                @touchcancel="handleMessageTouchEnd"
               >
                 <button
                   v-if="entry.data.replyTo"
@@ -989,8 +1112,13 @@ onUnmounted(() => {
             {{ makeReplyPreview(replyTarget.content) }}
           </div>
         </div>
-        <button type="button" class="text-muted-foreground hover:text-foreground" @click="clearReplyTarget">
-          取消
+        <button
+          type="button"
+          class="text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="dismiss reply"
+          @click="clearReplyTarget"
+        >
+          <X class="size-4" />
         </button>
       </div>
       <div
@@ -1054,8 +1182,13 @@ onUnmounted(() => {
             {{ makeReplyPreview(replyTarget.content) }}
           </div>
         </div>
-        <button type="button" class="text-muted-foreground hover:text-foreground" @click="clearReplyTarget">
-          取消
+        <button
+          type="button"
+          class="text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="dismiss reply"
+          @click="clearReplyTarget"
+        >
+          <X class="size-4" />
         </button>
       </div>
 
@@ -1105,6 +1238,7 @@ onUnmounted(() => {
 
     <div
       v-if="contextMenu"
+      ref="contextMenuRef"
       class="fixed z-50 min-w-36 overflow-hidden rounded-xl border bg-popover shadow-lg"
       :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
     >

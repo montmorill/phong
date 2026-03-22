@@ -28,9 +28,11 @@ const props = withDefaults(defineProps<{
   replyingToId: number | null
   visibleDepthLimit: number
   maxVisibleDepth?: number | null
+  visualDepthLimit?: number
   expandStep?: number
 }>(), {
   maxVisibleDepth: null,
+  visualDepthLimit: 4,
   expandStep: 3,
 })
 
@@ -67,6 +69,8 @@ const canExpandDeeper = computed(() => {
 })
 const continueThread = computed(() => reachesVisibleLimit.value && !canExpandDeeper.value)
 const showChildren = computed(() => hasChildren.value && !manuallyCollapsed.value && !reachesVisibleLimit.value)
+const isCompressedDepth = computed(() => props.depth > props.visualDepthLimit)
+const compressChildren = computed(() => props.depth >= props.visualDepthLimit)
 const postItemProps = computed(() => {
   const { children, parentId, parentUsername, parentNickname, parentContent, ...rest } = props.node
   return rest
@@ -92,7 +96,13 @@ function expandDeeper() {
 </script>
 
 <template>
-  <div class="thread-node" :class="{ 'thread-node-nested': depth > 1 }">
+  <div
+    class="thread-node"
+    :class="{
+      'thread-node-nested': depth > 1,
+      'thread-node-compressed': isCompressedDepth,
+    }"
+  >
     <span v-if="depth > 1" class="thread-branch" aria-hidden="true">
       <button
         v-if="hasChildren && !continueThread"
@@ -145,6 +155,7 @@ function expandDeeper() {
       <div
         v-if="showChildren"
         class="thread-children"
+        :class="{ 'thread-children-compressed': compressChildren }"
       >
         <div
           v-for="(child, index) in node.children"
@@ -158,6 +169,7 @@ function expandDeeper() {
             :replying-to-id="replyingToId"
             :visible-depth-limit="subtreeVisibleDepthLimit"
             :max-visible-depth="maxVisibleDepth"
+            :visual-depth-limit="visualDepthLimit"
             :expand-step="expandStep"
             @reply="emit('reply', $event)"
             @deleted="emit('deleted', $event)"
@@ -184,6 +196,8 @@ function expandDeeper() {
 
 .thread-body {
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .thread-branch {
@@ -257,6 +271,10 @@ function expandDeeper() {
   padding-left: 2rem;
 }
 
+.thread-children-compressed {
+  padding-left: 1rem;
+}
+
 .thread-child {
   position: relative;
   min-width: 0;
@@ -292,5 +310,57 @@ function expandDeeper() {
 .thread-child-last::before {
   bottom: auto;
   height: 2.35rem;
+}
+
+.thread-node-compressed .thread-branch {
+  left: -0.95rem;
+  width: 0.95rem;
+}
+
+.thread-node-compressed .thread-toggle {
+  width: 1rem;
+  height: 1rem;
+}
+
+.thread-children-compressed > .thread-child::before,
+.thread-children-compressed > .thread-child::after {
+  left: -0.95rem;
+}
+
+.thread-children-compressed > .thread-child::after {
+  width: 0.95rem;
+  border-bottom-left-radius: 0.72rem;
+}
+
+@media (max-width: 640px) {
+  .thread-children {
+    padding-left: 1.35rem;
+  }
+
+  .thread-children-compressed {
+    padding-left: 0.75rem;
+  }
+
+  .thread-branch {
+    left: -1rem;
+    width: 1rem;
+  }
+
+  .thread-child::before,
+  .thread-child::after {
+    left: -1rem;
+  }
+
+  .thread-child::after {
+    width: 1rem;
+  }
+
+  .thread-more,
+  .thread-continue {
+    max-width: 100%;
+    line-height: 1.45;
+    white-space: normal;
+    word-break: break-word;
+  }
 }
 </style>

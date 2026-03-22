@@ -76,10 +76,14 @@ const visibleAncestors = computed(() => {
   return ancestors.value.slice(-ancestorPreviewCount.value)
 })
 const subthreadVisibleDepthLimit = computed(() => {
-  const availableWidth = Math.min(Math.max(viewportWidth.value - 32, 320), 672)
-  const minCardWidth = availableWidth < 480 ? 220 : 260
-  const indentWidth = 36
-  return Math.max(4, Math.min(SUBTHREAD_VISIBLE_DEPTH_LIMIT, Math.floor((availableWidth - minCardWidth) / indentWidth) + 1))
+  if (viewportWidth.value < 480)
+    return 4
+  if (viewportWidth.value < 768)
+    return 6
+  const availableWidth = Math.min(Math.max(viewportWidth.value - 48, 360), 672)
+  const minCardWidth = 280
+  const indentWidth = 42
+  return Math.max(5, Math.min(SUBTHREAD_VISIBLE_DEPTH_LIMIT, Math.floor((availableWidth - minCardWidth) / indentWidth) + 3))
 })
 const threadVisibleDepthLimit = computed(() =>
   post.value?.parentId ? subthreadVisibleDepthLimit.value : ROOT_THREAD_VISIBLE_DEPTH_LIMIT,
@@ -87,6 +91,13 @@ const threadVisibleDepthLimit = computed(() =>
 const threadMaxVisibleDepth = computed<number | null>(() =>
   post.value?.parentId ? subthreadVisibleDepthLimit.value : ROOT_THREAD_MAX_VISIBLE_DEPTH,
 )
+const threadVisualDepthLimit = computed(() => {
+  if (viewportWidth.value < 480)
+    return 2
+  if (viewportWidth.value < 768)
+    return 3
+  return 4
+})
 
 function updateViewportWidth() {
   viewportWidth.value = window.innerWidth
@@ -281,6 +292,7 @@ watch(() => props.id, load)
             :replying-to-id="replyingToId"
             :visible-depth-limit="threadVisibleDepthLimit"
             :max-visible-depth="threadMaxVisibleDepth"
+            :visual-depth-limit="threadVisualDepthLimit"
             :expand-step="3"
             @reply="startReply"
             @deleted="onReplyDeleted"
