@@ -4,6 +4,7 @@ import { userHasCapability } from '../auth/service'
 
 const NorthernBody = t.Object({
   ip: t.String({ format: 'ipv4' }),
+  port: t.Number({ min: 0, max: 65535 }),
 })
 
 const northern: Partial<typeof NorthernBody.static> | null = {}
