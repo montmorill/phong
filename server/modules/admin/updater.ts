@@ -103,7 +103,7 @@ export function runUpdateScript() {
   if (updateStatus.running)
     return { ok: false as const, reason: 'running' as const, scriptPath }
 
-  const child = spawn('bash', [scriptPath], {
+  const child = spawn('bash', ['--login', scriptPath], {
     cwd: repoRoot,
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
