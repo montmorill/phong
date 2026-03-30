@@ -8,7 +8,7 @@ export interface LogEntry {
   timestamp: number
 }
 
-const MAX_LOGS = Number(process.env.MAX_LOGS) || 500
+const MAX_LOGS = Number(Bun.env.MAX_LOGS) || 500
 export const logBuffer: LogEntry[] = []
 export const logListeners = new Set<(entry: LogEntry) => void>()
 

@@ -157,9 +157,11 @@ export function buildCensorMap(word: typeof hantingWords.$inferSelect): Record<s
   const map: Record<string, string> = {}
   const allText = word.definition + word.example
   for (const char of new Set([...allText])) {
-    if (/\s/.test(char)) continue
+    if (/\s/.test(char))
+      continue
     const charPinyin = pinyin(char, { toneType: 'symbol' }).normalize('NFC')
-    if (charPinyin === char) continue
+    if (charPinyin === char)
+      continue
     if (answerChars.includes(char) || answerPinyins.has(charPinyin))
       map[char] = charPinyin
   }
