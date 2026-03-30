@@ -5,7 +5,8 @@
   "module": "index.ts",
   "scripts": {
     "dev": "bun run --watch index.ts",
-    "db:gen": "drizzle-kit generate"
+    "db:gen": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio"
   },
   "peerDependencies": {
     "typescript": "^5"

@@ -22,6 +22,7 @@ const router = createRouter({
     { path: '/signup', component: () => import('@/views/Signup.vue'), meta: { guestOnly: true } },
     { path: '/settings', component: () => import('@/views/Settings.vue'), meta: { authRequired: true } },
     { path: '/admin', component: () => import('@/views/Admin.vue'), meta: { authRequired: true, capabilityRequired: 'admin:view' } },
+    { path: '/admin/studio', component: () => import('@/views/AdminStudio.vue'), meta: { authRequired: true, capabilityRequired: 'admin:view' } },
     { path: '/inbox', component: () => import('@/views/Inbox.vue'), meta: { authRequired: true } },
     { path: '/mail/compose', component: () => import('@/views/MailCompose.vue'), meta: { authRequired: true } },
     { path: '/mail/:id', component: () => import('@/views/MailDetail.vue'), props: route => ({ id: Number(route.params.id) }), meta: { authRequired: true } },

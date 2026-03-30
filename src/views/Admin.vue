@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { user } from '@/lib/api'
 import { hasCapability } from '@/lib/capabilities'
-import AdminDatabase from './admin/AdminDatabase.vue'
 import AdminLog from './admin/AdminLog.vue'
 
 interface UpdateStatus {
@@ -24,13 +23,11 @@ interface UpdateStatus {
 
 const router = useRouter()
 const canViewAdmin = computed(() => hasCapability(user.value?.capabilities, 'admin:view'))
-const canEditDatabase = computed(() => hasCapability(user.value?.capabilities, 'admin:edit'))
 const canRunUpdate = computed(() => hasCapability(user.value?.capabilities, 'admin:update'))
 
 type Tab = keyof typeof TABS
 const TABS = {
   backend: '服务端日志',
-  database: '数据库',
 }
 
 function getTabFromHash(): Tab {
@@ -370,7 +367,6 @@ onUnmounted(() => {
         :auto-scroll="autoScroll && !selectedDate"
         :empty-text="historyLoading ? '加载中…' : '等待日志…'"
       />
-      <AdminDatabase v-show="tab === 'database'" :can-edit="canEditDatabase" />
     </div>
   </div>
 </template>
