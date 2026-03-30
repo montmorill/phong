@@ -6,7 +6,7 @@ import { bus } from '../events/bus'
 import { adminEditAuth, adminUpdateAuth, adminViewAuth } from './guard'
 import { getLogDates, logBuffer, logListeners, readLogsByDate } from './logger'
 import { deleteTableRow, insertTableRow, queryTable, tableNames, updateTableRow } from './service'
-import { ensureStudioRunning, getStudioStatus, proxyStudio } from './studio'
+import { proxyStudio } from './studio'
 import { getUpdateStatus, runUpdateScript } from './updater'
 
 const wsHandlers = new Map<ElysiaWS, {
@@ -21,13 +21,6 @@ export default new Elysia({ prefix: '/admin' })
     .get('/logs', () => logBuffer)
     .get('/log-dates', () => getLogDates())
     .get('/update', () => getUpdateStatus())
-    .get('/studio', () => getStudioStatus())
-    .post('/studio/start', async ({ status }) => {
-      const result = await ensureStudioRunning()
-      if (!result.ok)
-        return status(503, { message: 'error.drizzleStudioUnavailable', studio: result.status })
-      return { ok: true, studio: result.status }
-    })
     .get('/logs/:date', ({ params, status }) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(params.date))
         return status(400, { message: 'error.badRequest' })
