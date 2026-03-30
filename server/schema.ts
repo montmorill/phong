@@ -121,13 +121,14 @@ export const hantingWords = sqliteTable('hanting_words', {
 ])
 
 export const hantingFeedback = sqliteTable('hanting_feedback', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
   wordId: integer('word_id').notNull(),
   variant: integer('variant').notNull().default(0),
   username: text('username').notNull().references(() => users.username),
   type: text('type').notNull(), // pinyin, definition, example, duplicate, other
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-})
+}, table => [
+  primaryKey({ columns: [table.wordId, table.variant, table.username, table.type] }),
+])
 
 export const hitokoto = sqliteTable('hitokoto', {
   id: integer('id').primaryKey({ autoIncrement: true }),
