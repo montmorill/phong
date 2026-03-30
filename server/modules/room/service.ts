@@ -128,8 +128,8 @@ setInterval(() => {
 
 // ── DB operations ─────────────────────────────────────────────────────────────
 
-export function listRooms() {
-  return db
+export async function listRooms() {
+  const roomList = await db
     .select({
       id: rooms.id,
       name: rooms.name,
@@ -138,6 +138,11 @@ export function listRooms() {
     })
     .from(rooms)
     .orderBy(asc(rooms.createdAt))
+
+  return roomList.map(room => ({
+    ...room,
+    onlineCount: roomClients.get(room.id)?.size ?? 0,
+  }))
 }
 
 export function findRoom(roomId: number) {

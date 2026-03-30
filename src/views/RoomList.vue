@@ -12,6 +12,7 @@ interface Room {
   name: string
   createdBy: string
   createdAt: Date
+  onlineCount: number
 }
 
 const rooms = ref<Room[]>([])
@@ -40,7 +41,7 @@ async function createRoom() {
   creating.value = true
   const { data } = await api.rooms.post({ name })
   if (data) {
-    rooms.value.push(data)
+    rooms.value.push({ ...data, onlineCount: 0 })
     newRoomName.value = ''
     router.push(`/rooms/${data.id}`)
   }
@@ -141,7 +142,9 @@ onMounted(loadRooms)
           @click.stop
         />
         <span v-else class="flex-1 min-w-0 font-medium truncate">
-          {{ room.name }}<span class="text-xs text-muted-foreground font-normal ml-1">@{{ room.createdBy }}</span>
+          {{ room.name }}
+          <span class="text-xs text-muted-foreground font-normal ml-1">@{{ room.createdBy }}</span>
+          <span v-if="room.onlineCount" class="text-xs text-muted-foreground font-normal ml-2">· {{ $t('room.online', { count: room.onlineCount }) }}</span>
         </span>
 
         <template v-if="user?.username === room.createdBy && renamingId !== room.id">
