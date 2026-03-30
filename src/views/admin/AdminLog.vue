@@ -31,7 +31,7 @@ watch(() => props.logs.length, () => {
 </script>
 
 <template>
-  <ScrollArea ref="logEl" class="flex-1 font-mono text-xs p-3 space-y-0.5">
+  <ScrollArea ref="logEl" class="flex-1 min-h-0 font-mono text-xs p-3 space-y-0.5">
     <div
       v-for="(entry, i) in logs"
       :key="i"

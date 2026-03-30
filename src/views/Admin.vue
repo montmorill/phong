@@ -296,7 +296,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="w-full flex flex-col h-[calc(100vh-4em)]">
+  <div class="w-full h-full min-h-0 flex flex-col overflow-hidden">
     <div class="border-b px-4 py-3 flex items-center gap-4 shrink-0">
       <span class="font-bold">Admin</span>
       <div class="flex gap-1">
@@ -363,7 +363,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="flex-1 overflow-hidden flex flex-col">
+    <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
       <AdminLog
         v-show="tab === 'backend'"
         :logs="pagedLogs"

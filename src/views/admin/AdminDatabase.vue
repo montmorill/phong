@@ -200,7 +200,7 @@ onMounted(loadTables)
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col overflow-hidden">
+  <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
     <div class="flex items-center gap-2 px-4 py-2 border-b shrink-0 flex-wrap">
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
@@ -235,7 +235,7 @@ onMounted(loadTables)
       </div>
     </div>
 
-    <div class="flex-1 overflow-auto">
+    <div class="flex-1 min-h-0 overflow-auto">
       <table class="text-xs border-collapse min-w-max w-full">
         <thead class="sticky top-0 bg-background shadow-[0_1px_0_0_var(--border)]">
           <tr>
