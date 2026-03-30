@@ -24,11 +24,12 @@ const router = createRouter({
     {
       path: '/admin',
       component: () => import('@/views/Admin.vue'),
-      meta: { authRequired: true, capabilityRequired: 'admin:view' },
+      meta: { capabilityRequired: 'admin:view' },
+      redirect: '/admin/log',
       children: [
-        { path: '', name: 'admin-backend', meta: { adminTab: 'backend' } },
-        { path: 'studio', name: 'admin-studio', meta: { adminTab: 'studio' } },
-        { path: 'database', name: 'admin-database', meta: { adminTab: 'database' } },
+        { path: 'log', component: () => import('@/views/admin/AdminBackend.vue') },
+        { path: 'studio', component: () => import('@/views/admin/AdminStudio.vue') },
+        { path: 'database', component: () => import('@/views/admin/AdminDatabase.vue') },
       ],
     },
     { path: '/inbox', component: () => import('@/views/Inbox.vue'), meta: { authRequired: true } },

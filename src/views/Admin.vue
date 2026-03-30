@@ -1,313 +1,33 @@
 <script setup lang="ts">
-import type { LogEntry } from './admin/AdminLog.vue'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { user } from '@/lib/api'
 import { hasCapability } from '@/lib/capabilities'
-import AdminDatabase from './admin/AdminDatabase.vue'
-import AdminLog from './admin/AdminLog.vue'
-
-interface UpdateStatus {
-  running: boolean
-  status: 'idle' | 'running' | 'success' | 'failed'
-  scriptPath: string | null
-  cwd: string
-  pid: number | null
-  startedAt: number | null
-  finishedAt: number | null
-  exitCode: number | null
-  signal: string | null
-  lastOutput: string[]
-  error: string | null
-}
 
 const router = useRouter()
 const route = useRoute()
 const canViewAdmin = computed(() => hasCapability(user.value?.capabilities, 'admin:view'))
-const canRunUpdate = computed(() => hasCapability(user.value?.capabilities, 'admin:update'))
-const canEditDatabase = computed(() => hasCapability(user.value?.capabilities, 'admin:edit'))
 
-type Tab = keyof typeof TABS
-const TABS = {
-  backend: '服务端日志',
-  studio: 'Drizzle Studio',
-  database: '数据库',
-}
+type Tab = 'backend' | 'studio' | 'database'
 
-function isTab(value: unknown): value is Tab {
-  return typeof value === 'string' && Object.keys(TABS).includes(value)
-}
+const tabs: Array<{ key: Tab, label: string, to: string }> = [
+  { key: 'backend', label: '服务端日志', to: '/admin/log' },
+  { key: 'studio', label: 'Drizzle Studio', to: '/admin/studio' },
+  { key: 'database', label: '数据库', to: '/admin/database' },
+]
 
-function getTabFromRoute(): Tab {
-  const matched = route.matched[route.matched.length - 1]
-  const adminTab = matched?.meta?.adminTab
-  return isTab(adminTab) ? adminTab : 'backend'
-}
-
-function formatTimestamp(value: number | null) {
-  if (!value)
-    return ''
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(value)
-}
-
-function getExitSummary(state: UpdateStatus) {
-  if (state.exitCode !== null)
-    return `退出码 ${state.exitCode}`
-  if (state.signal)
-    return `信号 ${state.signal}`
-  return ''
-}
-
-const tab = ref<Tab>(getTabFromRoute())
-const LOG_PAGE_SIZE = 500
-const backendLogs = ref<LogEntry[]>([])
-const autoScroll = ref(true)
-const logPage = ref(0)
-const logDates = ref<string[]>([])
-const selectedDate = ref('')
-const historyLogs = ref<LogEntry[]>([])
-const historyLoading = ref(false)
-const updateSubmitting = ref(false)
-const updateError = ref('')
-const updateState = ref<UpdateStatus | null>(null)
-
-const authHeaders = computed(() => ({ Authorization: `Bearer ${localStorage.getItem('token') ?? ''}` }))
-const displayLogs = computed(() => selectedDate.value ? historyLogs.value : backendLogs.value)
-const totalLogPages = computed(() => Math.max(1, Math.ceil(displayLogs.value.length / LOG_PAGE_SIZE)))
-const pagedLogs = computed(() => displayLogs.value.slice(logPage.value * LOG_PAGE_SIZE, (logPage.value + 1) * LOG_PAGE_SIZE))
-const isUpdateBusy = computed(() => updateSubmitting.value || updateState.value?.running === true)
-const latestUpdateLine = computed(() => {
-  const lines = updateState.value?.lastOutput
-  return lines?.[lines.length - 1] ?? ''
+const currentTab = computed<Tab>(() => {
+  if (route.path === '/admin/studio')
+    return 'studio'
+  if (route.path === '/admin/database')
+    return 'database'
+  return 'backend'
 })
 
-const updateSummary = computed(() => {
-  const state = updateState.value
-
-  if (state?.running)
-    return `update.sh 执行中${state.startedAt ? ` · ${formatTimestamp(state.startedAt)}` : ''}`
-  if (updateError.value)
-    return updateError.value
-  if (state?.status === 'success')
-    return `update.sh 执行成功${state.finishedAt ? ` · ${formatTimestamp(state.finishedAt)}` : ''}`
-  if (state?.status === 'failed')
-    return `update.sh 执行失败${state.finishedAt ? ` · ${formatTimestamp(state.finishedAt)}` : ''}`
-  return ''
-})
-
-const updateDetail = computed(() => {
-  const state = updateState.value
-  if (!state)
-    return ''
-
-  if (state.running)
-    return latestUpdateLine.value || (state.pid ? `PID ${state.pid}` : '等待日志输出')
-  if (updateError.value)
-    return ''
-  if (state.status === 'failed')
-    return state.error || latestUpdateLine.value || getExitSummary(state)
-  if (state.status === 'success')
-    return latestUpdateLine.value || getExitSummary(state)
-  return ''
-})
-
-function setTab(nextTab: Tab) {
-  tab.value = nextTab
-
-  if (nextTab === 'backend') {
-    router.replace({ name: 'admin-backend' })
-    return
-  }
-
-  if (nextTab === 'studio') {
-    router.replace({ name: 'admin-studio' })
-    return
-  }
-
-  router.replace({ name: 'admin-database' })
-}
-
-function applyUpdateState(payload: unknown) {
-  if (!payload || typeof payload !== 'object')
-    return
-
-  updateState.value = payload as UpdateStatus
-}
-
-async function loadLogDates() {
-  const res = await fetch('/api/admin/log-dates', { headers: authHeaders.value })
-  if (res.ok)
-    logDates.value = await res.json()
-}
-
-async function loadHistoryLogs(date: string) {
-  historyLoading.value = true
-  historyLogs.value = []
-  logPage.value = 0
-
-  const res = await fetch(`/api/admin/logs/${date}`, { headers: authHeaders.value })
-  if (res.ok)
-    historyLogs.value = await res.json()
-
-  historyLoading.value = false
-  logPage.value = totalLogPages.value - 1
-}
-
-async function loadUpdateStatus() {
-  const res = await fetch('/api/admin/update', { headers: authHeaders.value })
-  if (!res.ok)
-    return
-
-  const body = await res.json()
-  applyUpdateState(body)
-  if (body?.status && body.status !== 'idle')
-    updateError.value = ''
-}
-
-async function runUpdate() {
-  if (isUpdateBusy.value)
-    return
-
-  updateSubmitting.value = true
-  updateError.value = ''
-  setTab('backend')
-  selectedDate.value = ''
-  autoScroll.value = true
-
-  try {
-    const res = await fetch('/api/admin/update', {
-      method: 'POST',
-      headers: authHeaders.value,
-    })
-    const body = await res.json().catch(() => ({}))
-
-    if (!res.ok) {
-      applyUpdateState(body.update)
-      updateError.value = body.message === 'error.updateScriptMissing'
-        ? '未找到 update.sh'
-        : body.message === 'error.updateAlreadyRunning'
-          ? ''
-          : '执行 update.sh 失败'
-      if (!body.update)
-        await loadUpdateStatus()
-      return
-    }
-
-    applyUpdateState(body.update)
-    await loadUpdateStatus()
-  }
-  catch {
-    updateError.value = '执行 update.sh 失败'
-  }
-  finally {
-    updateSubmitting.value = false
-  }
-}
-
-watch(selectedDate, (date) => {
-  logPage.value = 0
-  if (date)
-    loadHistoryLogs(date)
-  else
-    logPage.value = totalLogPages.value - 1
-})
-
-watch(() => backendLogs.value.length, () => {
-  if (autoScroll.value && !selectedDate.value)
-    logPage.value = totalLogPages.value - 1
-})
-
-watch(autoScroll, (value) => {
-  if (value && !selectedDate.value)
-    logPage.value = totalLogPages.value - 1
-})
-
-let ws: WebSocket | null = null
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-let updatePollTimer: ReturnType<typeof setInterval> | null = null
-let disposed = false
-
-function startUpdatePolling() {
-  if (updatePollTimer)
-    return
-
-  updatePollTimer = setInterval(() => {
-    loadUpdateStatus().catch(() => {})
-  }, 2000)
-}
-
-function stopUpdatePolling() {
-  if (!updatePollTimer)
-    return
-
-  clearInterval(updatePollTimer)
-  updatePollTimer = null
-}
-
-watch(() => updateState.value?.running, async (running, previous) => {
-  if (running)
-    startUpdatePolling()
-  else
-    stopUpdatePolling()
-
-  if (previous && !running)
-    await loadLogDates()
-}, { immediate: true })
-
-function connectWS() {
-  const token = localStorage.getItem('token') ?? ''
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-
-  ws = new WebSocket(`${protocol}//${location.host}/api/admin/ws?token=${encodeURIComponent(token)}`)
-  ws.onmessage = ({ data }) => {
-    try {
-      const parsed = JSON.parse(data)
-      if (parsed.type === 'ping' || parsed.type === 'event')
-        return
-      backendLogs.value.push(parsed)
-      if (backendLogs.value.length > 1000)
-        backendLogs.value.shift()
-    }
-    catch {}
-  }
-  ws.onclose = () => {
-    if (!disposed)
-      reconnectTimer = setTimeout(connectWS, 3000)
-  }
-}
-
-watch(() => route.fullPath, () => {
-  tab.value = getTabFromRoute()
-}, { immediate: true })
-
-onMounted(async () => {
-  if (!canViewAdmin.value) {
+onMounted(() => {
+  if (!canViewAdmin.value)
     router.replace('/')
-    return
-  }
-
-  connectWS()
-  await Promise.allSettled([
-    loadLogDates(),
-    loadUpdateStatus(),
-  ])
-})
-
-onUnmounted(() => {
-  disposed = true
-  ws?.close()
-  if (reconnectTimer)
-    clearTimeout(reconnectTimer)
-  stopUpdatePolling()
 })
 </script>
 
@@ -317,88 +37,25 @@ onUnmounted(() => {
       <div class="px-4 py-3 flex items-center gap-4 overflow-x-auto">
         <span class="font-bold shrink-0">Admin</span>
         <div class="flex gap-1 shrink-0">
-          <Button
-            v-for="(label, key) in TABS"
-            :key="key"
-            :variant="tab === key ? 'default' : 'outline'"
-            size="sm"
-            :class="tab === key ? 'border border-primary' : ''"
-            @click="setTab(key as Tab)"
+          <RouterLink
+            v-for="item in tabs"
+            :key="item.key"
+            :to="item.to"
           >
-            {{ label }}
-          </Button>
-          <Button
-            v-if="canRunUpdate"
-            variant="outline"
-            size="sm"
-            :disabled="isUpdateBusy"
-            @click="runUpdate"
-          >
-            {{ isUpdateBusy ? '执行中…' : 'update.sh' }}
-          </Button>
-        </div>
-        <div class="ml-auto flex items-center gap-2 shrink-0">
-          <div v-if="updateSummary || updateDetail" class="text-right leading-4">
-            <div v-if="updateSummary" class="text-xs text-muted-foreground">
-              {{ updateSummary }}
-            </div>
-            <div v-if="updateDetail" class="text-xs text-muted-foreground max-w-md truncate">
-              {{ updateDetail }}
-            </div>
-          </div>
-          <template v-if="tab === 'backend'">
-            <select
-              v-model="selectedDate"
-              class="text-xs border rounded px-2 py-1 bg-background text-foreground"
+            <Button
+              :variant="currentTab === item.key ? 'default' : 'outline'"
+              size="sm"
+              :class="currentTab === item.key ? 'border border-primary' : ''"
             >
-              <option value="">
-                实时
-              </option>
-              <option v-for="d in logDates" :key="d" :value="d">
-                {{ d }}
-              </option>
-            </select>
-            <template v-if="!selectedDate">
-              <label class="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                <input v-model="autoScroll" type="checkbox" class="size-3">
-                自动滚动
-              </label>
-            </template>
-            <template v-if="totalLogPages > 1">
-              <Button variant="ghost" size="sm" :disabled="logPage === 0" @click="logPage--">
-                上一页
-              </Button>
-              <span class="text-xs text-muted-foreground">{{ logPage + 1 }}/{{ totalLogPages }}</span>
-              <Button variant="ghost" size="sm" :disabled="logPage >= totalLogPages - 1" @click="logPage++">
-                下一页
-              </Button>
-            </template>
-            <Button v-if="!selectedDate" variant="outline" size="sm" @click="backendLogs = []">
-              清空
+              {{ item.label }}
             </Button>
-          </template>
+          </RouterLink>
         </div>
       </div>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
-      <AdminLog
-        v-show="tab === 'backend'"
-        :logs="pagedLogs"
-        :auto-scroll="autoScroll && !selectedDate"
-        :empty-text="historyLoading ? '加载中…' : '等待日志…'"
-      />
-      <iframe
-        v-show="tab === 'studio'"
-        src="/api/admin/studio/"
-        class="flex-1 w-full bg-background"
-        title="Drizzle Studio"
-        referrerpolicy="no-referrer"
-      />
-      <AdminDatabase
-        v-show="tab === 'database'"
-        :can-edit="canEditDatabase"
-      />
-    </div>
+    <RouterView v-slot="{ Component }">
+      <component :is="Component" />
+    </RouterView>
   </div>
 </template>

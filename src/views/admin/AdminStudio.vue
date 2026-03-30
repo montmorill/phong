@@ -25,7 +25,7 @@ onMounted(() => {
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <Button variant="outline" size="sm" @click="router.push('/admin')">
+        <Button variant="outline" size="sm" @click="router.push('/admin/log')">
           返回 Admin
         </Button>
       </div>
