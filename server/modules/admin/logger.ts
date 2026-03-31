@@ -16,7 +16,7 @@ const dataDir = resolve(import.meta.dir, '../../../data')
 
 function getLogFile() {
   const date = new Date().toISOString().slice(0, 10)
-  return resolve(dataDir, `server-${date}.log`)
+  return resolve(dataDir, 'logs', `${date}.log`)
 }
 
 // Load existing logs from today's file on startup
@@ -73,11 +73,14 @@ export function getLogDates(): string[] {
 }
 
 export function readLogsByDate(date: string): LogEntry[] {
-  const file = resolve(dataDir, `server-${date}.log`)
+  const file = resolve(dataDir, 'logs', `${date}.log`)
   if (!existsSync(file))
     return []
   try {
-    return readFileSync(file, 'utf-8').split('\n').filter(Boolean).map(l => JSON.parse(l))
+    return readFileSync(file, 'utf-8')
+      .split('\n')
+      .filter(Boolean)
+      .map(l => JSON.parse(l))
   }
   catch {
     return []

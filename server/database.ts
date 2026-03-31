@@ -14,7 +14,7 @@ export const sqlite = new Database(resolve(dataPath, 'sqlite.db'))
 sqlite.run('PRAGMA journal_mode = WAL;')
 sqlite.run('PRAGMA foreign_keys = ON;')
 
-export const db = drizzle({ schema })
+export const db = drizzle(sqlite, { schema })
 
 migrate(db, { migrationsFolder: resolve(import.meta.dir, 'drizzle') })
 
