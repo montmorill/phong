@@ -24,10 +24,7 @@ dist-ssr
 *.sw?
 
 # Database files
-data
-*.sqlite
-*.sqlite-shm
-*.sqlite-wal
+data/
 
 # Environment
 .env
