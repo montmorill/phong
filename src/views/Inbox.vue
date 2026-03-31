@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Inbox, MailPlus } from 'lucide-vue-next'
+import { Check, Inbox } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -235,15 +235,6 @@ async function navigate(item: DisplayItem) {
         >
           <Spinner v-if="markingAllRead" data-icon="inline-start" />
           {{ hasUnreadItems ? t('settings.notifications.markAllRead') : t('settings.notifications.markAllReadDone') }}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="gap-1.5"
-          @click="router.push('/mail/compose')"
-        >
-          <MailPlus class="size-4" />
-          {{ t('mail.compose') }}
         </Button>
       </div>
     </div>
