@@ -1,12 +1,12 @@
 brand:
-  name: 盐铁网
+  name: 平渹网
 home:
   joinGroup: 点击链接加入群聊{group}
-  notLoggedIn: 欢迎回到盐铁网！您还没有登录，请{login}或{signup}。
+  notLoggedIn: 欢迎回到平渹网！您还没有登录，请{login}或{signup}。
   loginLink: 登录
   signupLink: 注册
-  welcome: '{nickname}，欢迎回到盐铁网。'
-  joinGroupName: 【盐铁网工作小组】
+  welcome: '{nickname}，欢迎回到平渹网。'
+  joinGroupName: 【平渹网工作小组】
 nav:
   profile: 主页
   inbox: 收件箱
@@ -14,7 +14,7 @@ nav:
   logout: 登出
   post: 题壁
   rooms: 聊天室
-  hanting: 胡写
+  hanting: 汉听
 login:
   title: 登录
   submit: 登录
@@ -278,11 +278,11 @@ room:
       voteValid: 投票通过（{yes} 票有效 / {no} 票无效）
       voteInvalid: 投票否决（{yes} 票有效 / {no} 票无效）
 hanting:
-  title: 胡写大词库
+  title: 汉听大词库
   total: 共 {count} 条
   notFound: 未找到词语
   emptyTitle: 词库还是空的
-  emptyHint: 当前环境还没有导入胡写词条，导入后即可随机出题。
+  emptyHint: 当前环境还没有导入汉听词条，导入后即可随机出题。
   emptyFilteredTitle: 当前筛选下没有词条
   emptyFilteredHint: 换一个筛选条件试试，或者清空筛选重新随机。
   clearFilters: 清空筛选

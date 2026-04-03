@@ -370,7 +370,7 @@ onMounted(async () => {
           {{ showAnswer ? word.definition : censorText(word.definition) }}
         </p>
         <p v-if="word.example" class="text-sm text-muted-foreground text-start whitespace-pre-wrap">
-          {{ (showAnswer ? word.example : censorText(word.example)).replace("【例句】", "【冷蕨】") }}
+          {{ showAnswer ? word.example : censorText(word.example) }}
         </p>
       </div>
 
