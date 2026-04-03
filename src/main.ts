@@ -28,7 +28,6 @@ const router = createRouter({
       redirect: '/admin/log',
       children: [
         { path: 'log', component: () => import('@/views/admin/AdminBackend.vue') },
-        { path: 'studio', component: () => import('@/views/admin/AdminStudio.vue') },
         { path: 'database', component: () => import('@/views/admin/AdminDatabase.vue') },
       ],
     },
